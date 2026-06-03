@@ -405,6 +405,116 @@ const rutas: Ruta[] = [
       [22.435, -97.89],
     ],
   },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 40",
+    color: "#ef4444",
+    puntos: [
+      [22.392, -97.92],
+      [22.375, -97.905],
+      [22.35, -97.9],
+      [22.31, -97.88],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 41",
+    color: "#f97316",
+    puntos: [
+      [22.392, -97.92],
+      [22.37, -97.9],
+      [22.34, -97.885],
+      [22.31, -97.875],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 42",
+    color: "#eab308",
+    puntos: [
+      [22.392, -97.92],
+      [22.36, -97.91],
+      [22.33, -97.895],
+      [22.296, -97.886],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 43",
+    color: "#22c55e",
+    puntos: [
+      [22.392, -97.92],
+      [22.385, -97.91],
+      [22.376, -97.9],
+      [22.365, -97.89],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 44",
+    color: "#3b82f6",
+    puntos: [
+      [22.392, -97.92],
+      [22.405, -97.91],
+      [22.42, -97.9],
+      [22.435, -97.89],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 45",
+    color: "#8b5cf6",
+    puntos: [
+      [22.392, -97.92],
+      [22.37, -97.91],
+      [22.345, -97.895],
+      [22.32, -97.88],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 46",
+    color: "#ec4899",
+    puntos: [
+      [22.392, -97.92],
+      [22.382, -97.905],
+      [22.365, -97.89],
+      [22.345, -97.875],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 47",
+    color: "#14b8a6",
+    puntos: [
+      [22.392, -97.92],
+      [22.36, -97.902],
+      [22.33, -97.888],
+      [22.3, -97.878],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 48",
+    color: "#06b6d4",
+    puntos: [
+      [22.392, -97.92],
+      [22.374, -97.912],
+      [22.352, -97.902],
+      [22.328, -97.892],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 49",
+    color: "#db2777",
+    puntos: [
+      [22.392, -97.92],
+      [22.368, -97.904],
+      [22.34, -97.89],
+      [22.31, -97.878],
+    ],
+  },
 ];
 
 function BusAnimado({ bus }: { bus: Bus }) {

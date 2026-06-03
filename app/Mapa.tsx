@@ -427,14 +427,30 @@ function BusAnimado({ bus }: { bus: Bus }) {
   );
 }
 
-function AjustarMapa({ ubicacion }: { ubicacion: [number, number] | null }) {
+function AjustarMapa({
+  ubicacion,
+  rutasVisibles,
+}: {
+  ubicacion: [number, number] | null;
+  rutasVisibles: Ruta[];
+}) {
   const map = useMap();
 
   useEffect(() => {
     if (ubicacion) {
       map.flyTo(ubicacion, 15, { duration: 1 });
+      return;
     }
-  }, [ubicacion, map]);
+
+    const puntos = rutasVisibles.flatMap((ruta) => ruta.puntos);
+
+    if (puntos.length > 0) {
+      map.fitBounds(L.latLngBounds(puntos), {
+        paddingTopLeft: [24, 180],
+        paddingBottomRight: [24, 120],
+      });
+    }
+  }, [ubicacion, map, rutasVisibles]);
 
   return null;
 }
@@ -484,6 +500,8 @@ export default function Mapa() {
     return rutas.filter((ruta) => ruta.zona === zonaSeleccionada);
   }, [zonaSeleccionada]);
 
+  const rutasVisibles = rutas;
+
   const busesFiltrados = useMemo(() => {
     if (!rutaSeleccionada) return [];
 
@@ -495,8 +513,8 @@ export default function Mapa() {
   }, [buses, rutaSeleccionada]);
 
   const rutaActiva = useMemo(() => {
-    return rutasDeZona.find((ruta) => ruta.nombre === rutaSeleccionada) ?? null;
-  }, [rutasDeZona, rutaSeleccionada]);
+    return rutasVisibles.find((ruta) => ruta.nombre === rutaSeleccionada) ?? null;
+  }, [rutasVisibles, rutaSeleccionada]);
 
   const cambiarZona = (zona: Zona) => {
     setZonaSeleccionada(zona);
@@ -751,7 +769,7 @@ export default function Mapa() {
         </div>
 
         <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 10 }}>
-          {zonaSeleccionada} · {rutasDeZona.length} rutas visibles con color real
+          Todas las zonas · {rutasVisibles.length} rutas visibles con color real
         </div>
 
         <button
@@ -786,13 +804,16 @@ export default function Mapa() {
           padding: "12px 2px",
         }}
       >
-        {rutasDeZona.map((ruta) => {
+        {rutasVisibles.map((ruta) => {
           const esRutaActiva = ruta.nombre === rutaSeleccionada;
 
           return (
             <button
               key={ruta.nombre}
-              onClick={() => setRutaSeleccionada(ruta.nombre)}
+              onClick={() => {
+                setZonaSeleccionada(ruta.zona);
+                setRutaSeleccionada(ruta.nombre);
+              }}
               style={{
                 border: esRutaActiva
                   ? "1px solid rgba(255,255,255,.82)"
@@ -829,14 +850,14 @@ export default function Mapa() {
         scrollWheelZoom={true}
         style={{ width: "100%", height: "100%", background: "#020617" }}
       >
-        <AjustarMapa ubicacion={ubicacion} />
+        <AjustarMapa ubicacion={ubicacion} rutasVisibles={rutasVisibles} />
 
         <TileLayer
           attribution='&copy; OpenStreetMap &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        {rutasDeZona.map((ruta) => {
+        {rutasVisibles.map((ruta) => {
           const esRutaActiva = ruta.nombre === rutaSeleccionada;
 
           return (

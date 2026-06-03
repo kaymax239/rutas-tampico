@@ -29,9 +29,10 @@ type Bus = {
 };
 
 type Zona = "Tampico / Madero" | "Zona Norte / Altamira";
+type RutaZona = Zona | "Altamira" | "Altamira / Tampico";
 
 type Ruta = {
-  zona: Zona;
+  zona: RutaZona;
   nombre: string;
   color: string;
   puntos: [number, number][];
@@ -408,6 +409,106 @@ const rutas: Ruta[] = [
       [22.405, -97.91],
       [22.42, -97.9],
       [22.435, -97.89],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 40 – Altamira Centro / Arboledas / Monte Alto",
+    color: "#06b6d4",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.4035, -97.9290],
+      [22.4150, -97.9215],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 41 – Altamira Centro / Laguna Florida",
+    color: "#22c55e",
+    puntos: [
+      [22.3925, -97.9385],
+      [22.4015, -97.9460],
+      [22.4100, -97.9550],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 42 – Altamira Centro / Miramar / Pedrera",
+    color: "#f97316",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.3810, -97.9270],
+      [22.3710, -97.9150],
+    ],
+  },
+  {
+    zona: "Altamira / Tampico",
+    nombre: "Ruta 43 – Monte Alto / Pedrera / Tampico",
+    color: "#e11d48",
+    puntos: [
+      [22.4170, -97.9220],
+      [22.4040, -97.9120],
+      [22.3600, -97.8860],
+    ],
+  },
+  {
+    zona: "Altamira / Tampico",
+    nombre: "Ruta 44 – Altamira Centro / Santa Elena / Tampico",
+    color: "#6366f1",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.3730, -97.9180],
+      [22.3360, -97.8890],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 45 – Altamira Centro / Unidos Avanzamos",
+    color: "#84cc16",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.4020, -97.9510],
+      [22.4135, -97.9625],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 46 – Altamira Centro / Los Prados / Monte Alto",
+    color: "#0ea5e9",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.4050, -97.9330],
+      [22.4180, -97.9240],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 47 – Altamira Centro / Laguna de la Puerta",
+    color: "#a855f7",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.3815, -97.9510],
+      [22.3720, -97.9650],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 48 – Altamira / Puerto Industrial",
+    color: "#f43f5e",
+    puntos: [
+      [22.3920, -97.9380],
+      [22.4300, -97.9000],
+      [22.4600, -97.8750],
+    ],
+  },
+  {
+    zona: "Altamira",
+    nombre: "Ruta 49 – Monte Alto / Puerto Industrial",
+    color: "#14b8a6",
+    puntos: [
+      [22.4170, -97.9220],
+      [22.4380, -97.9020],
+      [22.4600, -97.8750],
     ],
   },
 ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -405,6 +405,158 @@ const rutas: Ruta[] = [
       [22.435, -97.89],
     ],
   },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Altamira UAT",
+    color: "#06b6d4",
+    puntos: [
+      [22.392, -97.92],
+      [22.372, -97.905],
+      [22.345, -97.89],
+      [22.318, -97.878],
+      [22.292, -97.866],
+      [22.268, -97.858],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Pedrera UAT",
+    color: "#f59e0b",
+    puntos: [
+      [22.43, -97.935],
+      [22.408, -97.922],
+      [22.382, -97.906],
+      [22.35, -97.892],
+      [22.318, -97.878],
+      [22.268, -97.858],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Azteca UAT",
+    color: "#8b5cf6",
+    puntos: [
+      [22.405, -97.91],
+      [22.388, -97.898],
+      [22.362, -97.886],
+      [22.335, -97.876],
+      [22.302, -97.866],
+      [22.268, -97.858],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Blanco Kinder",
+    color: "#ec4899",
+    puntos: [
+      [22.418, -97.918],
+      [22.397, -97.904],
+      [22.372, -97.892],
+      [22.342, -97.881],
+      [22.31, -97.872],
+      [22.276, -97.864],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 40 - Altamira Centro / Arboledas / Monte Alto",
+    color: "#06b6d4",
+    puntos: [
+      [22.392, -97.938],
+      [22.4035, -97.929],
+      [22.415, -97.9215],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 41 - Altamira Centro / Laguna Florida",
+    color: "#22c55e",
+    puntos: [
+      [22.3925, -97.9385],
+      [22.4015, -97.946],
+      [22.41, -97.955],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 42 - Altamira Centro / Miramar / Pedrera",
+    color: "#f97316",
+    puntos: [
+      [22.392, -97.938],
+      [22.381, -97.927],
+      [22.371, -97.915],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 43 - Monte Alto / Pedrera / Tampico",
+    color: "#e11d48",
+    puntos: [
+      [22.417, -97.922],
+      [22.404, -97.912],
+      [22.36, -97.886],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 44 - Altamira Centro / Santa Elena / Tampico",
+    color: "#6366f1",
+    puntos: [
+      [22.392, -97.938],
+      [22.373, -97.918],
+      [22.336, -97.889],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 45 - Altamira Centro / Unidos Avanzamos",
+    color: "#84cc16",
+    puntos: [
+      [22.392, -97.938],
+      [22.402, -97.951],
+      [22.4135, -97.9625],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 46 - Altamira Centro / Los Prados / Monte Alto",
+    color: "#0ea5e9",
+    puntos: [
+      [22.392, -97.938],
+      [22.405, -97.933],
+      [22.418, -97.924],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 47 - Altamira Centro / Laguna de la Puerta",
+    color: "#a855f7",
+    puntos: [
+      [22.392, -97.938],
+      [22.3815, -97.951],
+      [22.372, -97.965],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 48 - Altamira / Puerto Industrial",
+    color: "#f43f5e",
+    puntos: [
+      [22.392, -97.938],
+      [22.43, -97.9],
+      [22.46, -97.875],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 49 - Monte Alto / Puerto Industrial",
+    color: "#14b8a6",
+    puntos: [
+      [22.417, -97.922],
+      [22.438, -97.902],
+      [22.46, -97.875],
+    ],
+  },
 ];
 
 function BusAnimado({ bus }: { bus: Bus }) {
@@ -427,14 +579,30 @@ function BusAnimado({ bus }: { bus: Bus }) {
   );
 }
 
-function AjustarMapa({ ubicacion }: { ubicacion: [number, number] | null }) {
+function AjustarMapa({
+  ubicacion,
+  rutasVisibles,
+}: {
+  ubicacion: [number, number] | null;
+  rutasVisibles: Ruta[];
+}) {
   const map = useMap();
 
   useEffect(() => {
     if (ubicacion) {
       map.flyTo(ubicacion, 15, { duration: 1 });
+      return;
     }
-  }, [ubicacion, map]);
+
+    const puntos = rutasVisibles.flatMap((ruta) => ruta.puntos);
+
+    if (puntos.length > 0) {
+      map.fitBounds(L.latLngBounds(puntos), {
+        paddingTopLeft: [24, 180],
+        paddingBottomRight: [24, 120],
+      });
+    }
+  }, [ubicacion, map, rutasVisibles]);
 
   return null;
 }
@@ -484,6 +652,8 @@ export default function Mapa() {
     return rutas.filter((ruta) => ruta.zona === zonaSeleccionada);
   }, [zonaSeleccionada]);
 
+  const rutasVisibles = rutas;
+
   const busesFiltrados = useMemo(() => {
     if (!rutaSeleccionada) return [];
 
@@ -493,6 +663,10 @@ export default function Mapa() {
         b.ruta?.toLowerCase().includes(rutaSeleccionada.toLowerCase())
     );
   }, [buses, rutaSeleccionada]);
+
+  const rutaActiva = useMemo(() => {
+    return rutasVisibles.find((ruta) => ruta.nombre === rutaSeleccionada) ?? null;
+  }, [rutasVisibles, rutaSeleccionada]);
 
   const cambiarZona = (zona: Zona) => {
     setZonaSeleccionada(zona);
@@ -628,89 +802,259 @@ export default function Mapa() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100vh", position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100vh",
+        position: "relative",
+        background: "#020617",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
           position: "absolute",
-          top: 12,
-          left: 12,
-          right: 12,
+          inset: 0,
+          zIndex: 500,
+          pointerEvents: "none",
+          background:
+            "linear-gradient(180deg, rgba(2,6,23,.58) 0%, rgba(2,6,23,.04) 32%, rgba(2,6,23,.72) 100%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: 14,
+          left: 14,
+          right: 14,
           zIndex: 99999,
-          background: "rgba(15,23,42,.92)",
+          background:
+            "linear-gradient(135deg, rgba(2,6,23,.94), rgba(15,23,42,.88))",
           color: "white",
-          borderRadius: 18,
-          padding: 12,
-          boxShadow: "0 10px 30px rgba(0,0,0,.35)",
+          border: "1px solid rgba(255,255,255,.18)",
+          borderRadius: 26,
+          padding: 16,
+          boxShadow: "0 22px 65px rgba(0,0,0,.48)",
+          backdropFilter: "blur(18px)",
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 800 }}>Rutas Tampico</div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(34,197,94,.14)",
+                border: "1px solid rgba(74,222,128,.28)",
+                color: "#bbf7d0",
+                padding: "5px 9px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: 0.6,
+                marginBottom: 9,
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 999,
+                  background: "#22c55e",
+                  boxShadow: "0 0 14px #22c55e",
+                }}
+              />
+              EN VIVO
+            </div>
 
-        <div style={{ fontSize: 13, opacity: 0.85 }}>
-          🚍 Usuarios en esta ruta: {busesFiltrados.length}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 999,
+                  background: rutaActiva?.color ?? "#38bdf8",
+                  boxShadow: `0 0 24px ${rutaActiva?.color ?? "#38bdf8"}`,
+                  flex: "0 0 auto",
+                }}
+              />
+              <div
+                style={{
+                  fontSize: 18,
+                  lineHeight: 1.15,
+                  fontWeight: 950,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {rutaActiva?.nombre ?? "Rutas Tampico"}
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "rgba(255,255,255,.1)",
+              border: "1px solid rgba(255,255,255,.14)",
+              borderRadius: 18,
+              padding: "9px 11px",
+              textAlign: "center",
+              flex: "0 0 auto",
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 950 }}>
+              {busesFiltrados.length}
+            </div>
+            <div style={{ fontSize: 10, color: "#cbd5e1", fontWeight: 800 }}>
+              BUSES
+            </div>
+          </div>
+        </div>
+
+        <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 10 }}>
+          Todas las zonas · {rutasVisibles.length} rutas visibles con color real
         </div>
 
         <button
           onClick={() => setPantallaPasajero("rutas")}
           style={{
             width: "100%",
-            marginTop: 8,
-            padding: "10px 14px",
+            marginTop: 12,
+            padding: "12px 14px",
             borderRadius: 999,
-            border: "none",
-            background: "white",
-            color: "#111827",
-            fontWeight: 800,
+            border: "1px solid rgba(255,255,255,.18)",
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,.98), rgba(226,232,240,.94))",
+            color: "#0f172a",
+            fontWeight: 900,
+            boxShadow: "0 12px 28px rgba(2,6,23,.32)",
           }}
         >
           Cambiar ruta
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={obtenerMiUbicacion}
+      <div
         style={{
           position: "absolute",
+          left: 14,
           right: 14,
-          bottom: 24,
+          bottom: 18,
           zIndex: 99999,
-          background: "#2563eb",
-          color: "white",
-          border: "none",
-          padding: "12px 16px",
-          borderRadius: 999,
-          fontWeight: 800,
+          display: "flex",
+          gap: 10,
+          overflowX: "auto",
+          padding: "12px 2px",
         }}
       >
-        Mi ubicación
-      </button>
+        {rutasVisibles.map((ruta) => {
+          const esRutaActiva = ruta.nombre === rutaSeleccionada;
+
+          return (
+            <button
+              key={ruta.nombre}
+              onClick={() => {
+                setZonaSeleccionada(ruta.zona);
+                setRutaSeleccionada(ruta.nombre);
+              }}
+              style={{
+                border: esRutaActiva
+                  ? "1px solid rgba(255,255,255,.82)"
+                  : "1px solid rgba(255,255,255,.2)",
+                background: esRutaActiva
+                  ? `linear-gradient(135deg, ${ruta.color}, rgba(15,23,42,.92))`
+                  : "rgba(15,23,42,.82)",
+                color: "white",
+                borderRadius: 999,
+                padding: "10px 14px",
+                fontSize: 12,
+                fontWeight: 900,
+                whiteSpace: "nowrap",
+                boxShadow: esRutaActiva
+                  ? `0 0 28px ${ruta.color}`
+                  : "0 10px 24px rgba(0,0,0,.28)",
+                backdropFilter: "blur(14px)",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ color: esRutaActiva ? "white" : ruta.color }}>
+                ●
+              </span>{" "}
+              {ruta.nombre}
+            </button>
+          );
+        })}
+      </div>
 
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={12}
+        zoomControl={false}
         scrollWheelZoom={true}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", background: "#020617" }}
       >
-        <AjustarMapa ubicacion={ubicacion} />
+        <AjustarMapa ubicacion={ubicacion} rutasVisibles={rutasVisibles} />
 
         <TileLayer
-          attribution="&copy; OpenStreetMap"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        {rutasDeZona
-          .filter((ruta) => ruta.nombre === rutaSeleccionada)
-          .map((ruta) => (
-            <Polyline
-              key={ruta.nombre}
-              positions={ruta.puntos}
-              pathOptions={{
-                color: ruta.color,
-                weight: 6,
-                opacity: 0.9,
-              }}
-            />
-          ))}
+        {rutasVisibles.map((ruta) => {
+          const esRutaActiva = ruta.nombre === rutaSeleccionada;
+
+          return (
+            <Fragment key={ruta.nombre}>
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: "#000000",
+                  weight: esRutaActiva ? 20 : 14,
+                  opacity: esRutaActiva ? 0.34 : 0.22,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: ruta.color,
+                  weight: esRutaActiva ? 16 : 10,
+                  opacity: esRutaActiva ? 0.28 : 0.16,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: ruta.color,
+                  weight: esRutaActiva ? 7 : 4,
+                  opacity: esRutaActiva ? 1 : 0.78,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              >
+                <Popup>
+                  <b>{ruta.nombre}</b>
+                  <br />
+                  Zona: {ruta.zona}
+                </Popup>
+              </Polyline>
+            </Fragment>
+          );
+        })}
 
         {ubicacion && (
           <Marker position={ubicacion} icon={miUbicacionIcon}>

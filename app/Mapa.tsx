@@ -632,7 +632,15 @@ export default function Mapa() {
   }
 
   return (
-    <div style={{ width: "100%", height: "100vh", position: "relative" }}>
+    <div
+      style={{
+        width: "100%",
+        height: "100vh",
+        position: "relative",
+        background: "#020617",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
           position: "absolute",
@@ -640,7 +648,7 @@ export default function Mapa() {
           zIndex: 500,
           pointerEvents: "none",
           background:
-            "linear-gradient(180deg, rgba(2,6,23,.35) 0%, rgba(2,6,23,0) 28%, rgba(2,6,23,.28) 100%)",
+            "linear-gradient(180deg, rgba(2,6,23,.58) 0%, rgba(2,6,23,.04) 32%, rgba(2,6,23,.72) 100%)",
         }}
       />
 
@@ -652,57 +660,172 @@ export default function Mapa() {
           right: 14,
           zIndex: 99999,
           background:
-            "linear-gradient(135deg, rgba(15,23,42,.96), rgba(30,41,59,.9))",
+            "linear-gradient(135deg, rgba(2,6,23,.94), rgba(15,23,42,.88))",
           color: "white",
-          border: "1px solid rgba(255,255,255,.16)",
-          borderRadius: 22,
-          padding: 14,
-          boxShadow: "0 18px 45px rgba(2,6,23,.42)",
-          backdropFilter: "blur(14px)",
+          border: "1px solid rgba(255,255,255,.18)",
+          borderRadius: 26,
+          padding: 16,
+          boxShadow: "0 22px 65px rgba(0,0,0,.48)",
+          backdropFilter: "blur(18px)",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 12,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(34,197,94,.14)",
+                border: "1px solid rgba(74,222,128,.28)",
+                color: "#bbf7d0",
+                padding: "5px 9px",
+                borderRadius: 999,
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: 0.6,
+                marginBottom: 9,
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 999,
+                  background: "#22c55e",
+                  boxShadow: "0 0 14px #22c55e",
+                }}
+              />
+              EN VIVO
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 999,
+                  background: rutaActiva?.color ?? "#38bdf8",
+                  boxShadow: `0 0 24px ${rutaActiva?.color ?? "#38bdf8"}`,
+                  flex: "0 0 auto",
+                }}
+              />
+              <div
+                style={{
+                  fontSize: 18,
+                  lineHeight: 1.15,
+                  fontWeight: 950,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                {rutaActiva?.nombre ?? "Rutas Tampico"}
+              </div>
+            </div>
+          </div>
+
+          <div
             style={{
-              width: 12,
-              height: 12,
-              borderRadius: 999,
-              background: rutaActiva?.color ?? "#38bdf8",
-              boxShadow: `0 0 18px ${rutaActiva?.color ?? "#38bdf8"}`,
+              background: "rgba(255,255,255,.1)",
+              border: "1px solid rgba(255,255,255,.14)",
+              borderRadius: 18,
+              padding: "9px 11px",
+              textAlign: "center",
               flex: "0 0 auto",
             }}
-          />
-          <div style={{ fontSize: 18, fontWeight: 900 }}>
-            {rutaActiva?.nombre ?? "Rutas Tampico"}
+          >
+            <div style={{ fontSize: 20, fontWeight: 950 }}>
+              {busesFiltrados.length}
+            </div>
+            <div style={{ fontSize: 10, color: "#cbd5e1", fontWeight: 800 }}>
+              BUSES
+            </div>
           </div>
         </div>
 
-        <div style={{ fontSize: 13, opacity: 0.88, marginTop: 6 }}>
-          🚍 Usuarios en esta ruta: {busesFiltrados.length} · Rutas visibles:{" "}
-          {rutasDeZona.length}
+        <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 10 }}>
+          {zonaSeleccionada} · {rutasDeZona.length} rutas visibles con color real
         </div>
 
         <button
           onClick={() => setPantallaPasajero("rutas")}
           style={{
             width: "100%",
-            marginTop: 8,
-            padding: "10px 14px",
+            marginTop: 12,
+            padding: "12px 14px",
             borderRadius: 999,
-            border: "none",
-            background: "rgba(255,255,255,.96)",
-            color: "#111827",
-            fontWeight: 800,
-            boxShadow: "0 8px 18px rgba(2,6,23,.2)",
+            border: "1px solid rgba(255,255,255,.18)",
+            background:
+              "linear-gradient(135deg, rgba(255,255,255,.98), rgba(226,232,240,.94))",
+            color: "#0f172a",
+            fontWeight: 900,
+            boxShadow: "0 12px 28px rgba(2,6,23,.32)",
           }}
         >
           Cambiar ruta
         </button>
       </div>
 
+      <div
+        style={{
+          position: "absolute",
+          left: 14,
+          right: 14,
+          bottom: 18,
+          zIndex: 99999,
+          display: "flex",
+          gap: 10,
+          overflowX: "auto",
+          padding: "12px 2px",
+        }}
+      >
+        {rutasDeZona.map((ruta) => {
+          const esRutaActiva = ruta.nombre === rutaSeleccionada;
+
+          return (
+            <button
+              key={ruta.nombre}
+              onClick={() => setRutaSeleccionada(ruta.nombre)}
+              style={{
+                border: esRutaActiva
+                  ? "1px solid rgba(255,255,255,.82)"
+                  : "1px solid rgba(255,255,255,.2)",
+                background: esRutaActiva
+                  ? `linear-gradient(135deg, ${ruta.color}, rgba(15,23,42,.92))`
+                  : "rgba(15,23,42,.82)",
+                color: "white",
+                borderRadius: 999,
+                padding: "10px 14px",
+                fontSize: 12,
+                fontWeight: 900,
+                whiteSpace: "nowrap",
+                boxShadow: esRutaActiva
+                  ? `0 0 28px ${ruta.color}`
+                  : "0 10px 24px rgba(0,0,0,.28)",
+                backdropFilter: "blur(14px)",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ color: esRutaActiva ? "white" : ruta.color }}>
+                ●
+              </span>{" "}
+              {ruta.nombre}
+            </button>
+          );
+        })}
+      </div>
+
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={12}
+        zoomControl={false}
         scrollWheelZoom={true}
         style={{ width: "100%", height: "100%", background: "#020617" }}
       >
@@ -710,7 +833,7 @@ export default function Mapa() {
 
         <TileLayer
           attribution='&copy; OpenStreetMap &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
         {rutasDeZona.map((ruta) => {
@@ -721,9 +844,20 @@ export default function Mapa() {
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: "#0f172a",
-                  weight: esRutaActiva ? 12 : 8,
-                  opacity: esRutaActiva ? 0.22 : 0.12,
+                  color: "#000000",
+                  weight: esRutaActiva ? 20 : 14,
+                  opacity: esRutaActiva ? 0.34 : 0.22,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: ruta.color,
+                  weight: esRutaActiva ? 16 : 10,
+                  opacity: esRutaActiva ? 0.28 : 0.16,
                   lineCap: "round",
                   lineJoin: "round",
                 }}
@@ -734,7 +868,7 @@ export default function Mapa() {
                 pathOptions={{
                   color: ruta.color,
                   weight: esRutaActiva ? 7 : 4,
-                  opacity: esRutaActiva ? 0.95 : 0.62,
+                  opacity: esRutaActiva ? 1 : 0.78,
                   lineCap: "round",
                   lineJoin: "round",
                 }}

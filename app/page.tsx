@@ -74,67 +74,86 @@ export default function Home() {
       <main
         style={{
           minHeight: "100vh",
-          background: "#0f172a",
+          background:
+            "radial-gradient(circle at top left, rgba(37,99,235,.32), transparent 34%), radial-gradient(circle at bottom right, rgba(34,197,94,.22), transparent 36%), #020617",
           display: "flex",
           justifyContent: "center",
-          alignItems: "center",
+          alignItems: "flex-start",
           padding: 20,
+          overflowY: "auto",
         }}
       >
         <div
           style={{
-            background: "#111827",
-            padding: 30,
-            borderRadius: 24,
+            background:
+              "linear-gradient(145deg, rgba(15,23,42,.96), rgba(30,41,59,.9))",
+            border: "1px solid rgba(255,255,255,.12)",
+            padding: 22,
+            borderRadius: 28,
             width: "100%",
-            maxWidth: 420,
-            textAlign: "center",
-            boxShadow: "0 10px 30px rgba(0,0,0,.45)",
+            maxWidth: 460,
+            marginTop: 18,
+            marginBottom: 18,
+            boxShadow: "0 24px 70px rgba(0,0,0,.5)",
             display: "flex",
             flexDirection: "column",
-            gap: 12,
+            gap: 14,
+            backdropFilter: "blur(18px)",
           }}
         >
-          <h1 style={{ color: "white", fontSize: 30, fontWeight: 800 }}>
-            🚍 Rutas Tampico
-          </h1>
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(37,99,235,.18)",
+                border: "1px solid rgba(147,197,253,.28)",
+                color: "#bfdbfe",
+                padding: "8px 12px",
+                borderRadius: 999,
+                fontSize: 13,
+                fontWeight: 800,
+                marginBottom: 12,
+              }}
+            >
+              Transporte urbano en vivo
+            </div>
 
-          <p style={{ color: "#cbd5e1", marginBottom: 16 }}>
-            Transporte en vivo para Tampico, Madero y Altamira
-          </p>
+            <h1
+              style={{
+                color: "white",
+                fontSize: 34,
+                lineHeight: 1.05,
+                fontWeight: 900,
+                margin: 0,
+              }}
+            >
+              🚍 Rutas Tampico
+            </h1>
 
-          <button
-            onClick={() => setModo("chofer")}
-            style={{
-              width: "100%",
-              background: "#22c55e",
-              color: "white",
-              border: "none",
-              padding: 18,
-              borderRadius: 16,
-              fontSize: 18,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            🚌 Soy Chofer
-          </button>
+            <p style={{ color: "#cbd5e1", margin: "12px 0 2px" }}>
+              Elige una acción antes de entrar al mapa
+            </p>
+          </div>
 
           <button
             onClick={() => {
-              activarPasajero();
+              setPasajeroActivo(true);
               setModo("pasajero");
             }}
             style={{
               width: "100%",
-              background: "#2563eb",
+              background: "linear-gradient(135deg, #2563eb, #06b6d4)",
               color: "white",
-              border: "none",
-              padding: 18,
-              borderRadius: 16,
-              fontSize: 18,
-              fontWeight: 700,
+              border: "1px solid rgba(255,255,255,.18)",
+              padding: "18px 20px",
+              borderRadius: 22,
+              fontSize: 20,
+              fontWeight: 900,
               cursor: "pointer",
+              textAlign: "left",
+              boxShadow: "0 16px 32px rgba(37,99,235,.34)",
             }}
           >
             👤 Soy Pasajero
@@ -144,29 +163,35 @@ export default function Home() {
             onClick={abrirWhatsAppViajeSeguro}
             style={{
               width: "100%",
-              background: "#16a34a",
+              background: "linear-gradient(135deg, #16a34a, #22c55e)",
               color: "white",
-              border: "none",
-              padding: 12,
-              borderRadius: 16,
-              fontWeight: 800,
+              border: "1px solid rgba(255,255,255,.18)",
+              padding: "16px 18px",
+              borderRadius: 20,
+              fontSize: 17,
+              fontWeight: 900,
               cursor: "pointer",
+              textAlign: "left",
+              boxShadow: "0 14px 30px rgba(22,163,74,.28)",
             }}
           >
-            🛡️ Viaje Seguro WhatsApp
+            🛡️ Viaje Seguro
           </button>
 
           <button
             onClick={obtenerMiUbicacion}
             style={{
               width: "100%",
-              background: "#2563eb",
+              background: "linear-gradient(135deg, #0f172a, #2563eb)",
               color: "white",
-              border: "none",
-              padding: 12,
-              borderRadius: 16,
-              fontWeight: 800,
+              border: "1px solid rgba(147,197,253,.24)",
+              padding: "16px 18px",
+              borderRadius: 20,
+              fontSize: 17,
+              fontWeight: 900,
               cursor: "pointer",
+              textAlign: "left",
+              boxShadow: "0 14px 30px rgba(37,99,235,.24)",
             }}
           >
             📍 Mi Ubicación
@@ -176,16 +201,37 @@ export default function Home() {
             onClick={llamarEmergencias}
             style={{
               width: "100%",
-              background: "#dc2626",
+              background: "linear-gradient(135deg, #991b1b, #ef4444)",
               color: "white",
-              border: "none",
-              padding: 12,
-              borderRadius: 16,
-              fontWeight: 800,
+              border: "1px solid rgba(255,255,255,.18)",
+              padding: "16px 18px",
+              borderRadius: 20,
+              fontSize: 17,
+              fontWeight: 900,
               cursor: "pointer",
+              textAlign: "left",
+              boxShadow: "0 14px 30px rgba(220,38,38,.3)",
             }}
           >
-            🚨 Emergencia 911
+            🚨 911
+          </button>
+
+          <button
+            onClick={() => setModo("chofer")}
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,.08)",
+              color: "white",
+              border: "1px solid rgba(255,255,255,.14)",
+              padding: 15,
+              borderRadius: 18,
+              fontSize: 16,
+              fontWeight: 800,
+              cursor: "pointer",
+              marginTop: 4,
+            }}
+          >
+            🚌 Soy Chofer
           </button>
         </div>
       </main>

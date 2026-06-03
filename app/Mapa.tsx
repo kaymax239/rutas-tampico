@@ -405,6 +405,58 @@ const rutas: Ruta[] = [
       [22.435, -97.89],
     ],
   },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Altamira UAT",
+    color: "#06b6d4",
+    puntos: [
+      [22.392, -97.92],
+      [22.372, -97.905],
+      [22.345, -97.89],
+      [22.318, -97.878],
+      [22.292, -97.866],
+      [22.268, -97.858],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Pedrera UAT",
+    color: "#f59e0b",
+    puntos: [
+      [22.43, -97.935],
+      [22.408, -97.922],
+      [22.382, -97.906],
+      [22.35, -97.892],
+      [22.318, -97.878],
+      [22.268, -97.858],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Azteca UAT",
+    color: "#8b5cf6",
+    puntos: [
+      [22.405, -97.91],
+      [22.388, -97.898],
+      [22.362, -97.886],
+      [22.335, -97.876],
+      [22.302, -97.866],
+      [22.268, -97.858],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta Blanco Kinder",
+    color: "#ec4899",
+    puntos: [
+      [22.418, -97.918],
+      [22.397, -97.904],
+      [22.372, -97.892],
+      [22.342, -97.881],
+      [22.31, -97.872],
+      [22.276, -97.864],
+    ],
+  },
 ];
 
 function BusAnimado({ bus }: { bus: Bus }) {

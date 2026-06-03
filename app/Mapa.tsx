@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -494,6 +494,10 @@ export default function Mapa() {
     );
   }, [buses, rutaSeleccionada]);
 
+  const rutaActiva = useMemo(() => {
+    return rutasDeZona.find((ruta) => ruta.nombre === rutaSeleccionada) ?? null;
+  }, [rutasDeZona, rutaSeleccionada]);
+
   const cambiarZona = (zona: Zona) => {
     setZonaSeleccionada(zona);
     setRutaSeleccionada("");
@@ -632,21 +636,50 @@ export default function Mapa() {
       <div
         style={{
           position: "absolute",
-          top: 12,
-          left: 12,
-          right: 12,
+          inset: 0,
+          zIndex: 500,
+          pointerEvents: "none",
+          background:
+            "linear-gradient(180deg, rgba(2,6,23,.35) 0%, rgba(2,6,23,0) 28%, rgba(2,6,23,.28) 100%)",
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: 14,
+          left: 14,
+          right: 14,
           zIndex: 99999,
-          background: "rgba(15,23,42,.92)",
+          background:
+            "linear-gradient(135deg, rgba(15,23,42,.96), rgba(30,41,59,.9))",
           color: "white",
-          borderRadius: 18,
-          padding: 12,
-          boxShadow: "0 10px 30px rgba(0,0,0,.35)",
+          border: "1px solid rgba(255,255,255,.16)",
+          borderRadius: 22,
+          padding: 14,
+          boxShadow: "0 18px 45px rgba(2,6,23,.42)",
+          backdropFilter: "blur(14px)",
         }}
       >
-        <div style={{ fontSize: 18, fontWeight: 800 }}>Rutas Tampico</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 999,
+              background: rutaActiva?.color ?? "#38bdf8",
+              boxShadow: `0 0 18px ${rutaActiva?.color ?? "#38bdf8"}`,
+              flex: "0 0 auto",
+            }}
+          />
+          <div style={{ fontSize: 18, fontWeight: 900 }}>
+            {rutaActiva?.nombre ?? "Rutas Tampico"}
+          </div>
+        </div>
 
-        <div style={{ fontSize: 13, opacity: 0.85 }}>
-          🚍 Usuarios en esta ruta: {busesFiltrados.length}
+        <div style={{ fontSize: 13, opacity: 0.88, marginTop: 6 }}>
+          🚍 Usuarios en esta ruta: {busesFiltrados.length} · Rutas visibles:{" "}
+          {rutasDeZona.length}
         </div>
 
         <button
@@ -657,60 +690,64 @@ export default function Mapa() {
             padding: "10px 14px",
             borderRadius: 999,
             border: "none",
-            background: "white",
+            background: "rgba(255,255,255,.96)",
             color: "#111827",
             fontWeight: 800,
+            boxShadow: "0 8px 18px rgba(2,6,23,.2)",
           }}
         >
           Cambiar ruta
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={obtenerMiUbicacion}
-        style={{
-          position: "absolute",
-          right: 14,
-          bottom: 24,
-          zIndex: 99999,
-          background: "#2563eb",
-          color: "white",
-          border: "none",
-          padding: "12px 16px",
-          borderRadius: 999,
-          fontWeight: 800,
-        }}
-      >
-        Mi ubicación
-      </button>
-
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={12}
         scrollWheelZoom={true}
-        style={{ width: "100%", height: "100%" }}
+        style={{ width: "100%", height: "100%", background: "#020617" }}
       >
         <AjustarMapa ubicacion={ubicacion} />
 
         <TileLayer
-          attribution="&copy; OpenStreetMap"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; OpenStreetMap &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
         />
 
-        {rutasDeZona
-          .filter((ruta) => ruta.nombre === rutaSeleccionada)
-          .map((ruta) => (
-            <Polyline
-              key={ruta.nombre}
-              positions={ruta.puntos}
-              pathOptions={{
-                color: ruta.color,
-                weight: 6,
-                opacity: 0.9,
-              }}
-            />
-          ))}
+        {rutasDeZona.map((ruta) => {
+          const esRutaActiva = ruta.nombre === rutaSeleccionada;
+
+          return (
+            <Fragment key={ruta.nombre}>
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: "#0f172a",
+                  weight: esRutaActiva ? 12 : 8,
+                  opacity: esRutaActiva ? 0.22 : 0.12,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: ruta.color,
+                  weight: esRutaActiva ? 7 : 4,
+                  opacity: esRutaActiva ? 0.95 : 0.62,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              >
+                <Popup>
+                  <b>{ruta.nombre}</b>
+                  <br />
+                  Zona: {ruta.zona}
+                </Popup>
+              </Polyline>
+            </Fragment>
+          );
+        })}
 
         {ubicacion && (
           <Marker position={ubicacion} icon={miUbicacionIcon}>

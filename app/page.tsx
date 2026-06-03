@@ -121,7 +121,10 @@ export default function Home() {
           </button>
 
           <button
-            onClick={() => setModo("pasajero")}
+            onClick={() => {
+              activarPasajero();
+              setModo("pasajero");
+            }}
             style={{
               width: "100%",
               background: "#2563eb",
@@ -137,76 +140,53 @@ export default function Home() {
             👤 Soy Pasajero
           </button>
 
-          {/* Botones movidos al inicio */}
-          {modo !== "inicio" && (
-            <>
-              <button
-                onClick={activarPasajero}
-                style={{
-                  width: "100%",
-                  background: pasajeroActivo ? "#22c55e" : "#facc15",
-                  color: pasajeroActivo ? "white" : "#111827",
-                  border: "none",
-                  padding: 12,
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                {pasajeroActivo
-                  ? "Pasajero activo: compartiendo ubicación"
-                  : "Activar modo pasajero"}
-              </button>
+          <button
+            onClick={abrirWhatsAppViajeSeguro}
+            style={{
+              width: "100%",
+              background: "#16a34a",
+              color: "white",
+              border: "none",
+              padding: 12,
+              borderRadius: 16,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            🛡️ Viaje Seguro WhatsApp
+          </button>
 
-              <button
-                onClick={abrirWhatsAppViajeSeguro}
-                style={{
-                  width: "100%",
-                  background: "#16a34a",
-                  color: "white",
-                  border: "none",
-                  padding: 12,
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                🛡️ Viaje Seguro WhatsApp
-              </button>
+          <button
+            onClick={obtenerMiUbicacion}
+            style={{
+              width: "100%",
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              padding: 12,
+              borderRadius: 16,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            📍 Mi Ubicación
+          </button>
 
-              <button
-                onClick={obtenerMiUbicacion}
-                style={{
-                  width: "100%",
-                  background: "#2563eb",
-                  color: "white",
-                  border: "none",
-                  padding: 12,
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                📍 Mi Ubicación
-              </button>
-
-              <button
-                onClick={llamarEmergencias}
-                style={{
-                  width: "100%",
-                  background: "#dc2626",
-                  color: "white",
-                  border: "none",
-                  padding: 12,
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                🚨 Emergencia 911
-              </button>
-            </>
-          )}
+          <button
+            onClick={llamarEmergencias}
+            style={{
+              width: "100%",
+              background: "#dc2626",
+              color: "white",
+              border: "none",
+              padding: 12,
+              borderRadius: 16,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            🚨 Emergencia 911
+          </button>
         </div>
       </main>
     );

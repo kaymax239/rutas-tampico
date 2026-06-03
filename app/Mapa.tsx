@@ -457,6 +457,106 @@ const rutas: Ruta[] = [
       [22.276, -97.864],
     ],
   },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 40 - Altamira Centro / Arboledas / Monte Alto",
+    color: "#06b6d4",
+    puntos: [
+      [22.392, -97.938],
+      [22.4035, -97.929],
+      [22.415, -97.9215],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 41 - Altamira Centro / Laguna Florida",
+    color: "#22c55e",
+    puntos: [
+      [22.3925, -97.9385],
+      [22.4015, -97.946],
+      [22.41, -97.955],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 42 - Altamira Centro / Miramar / Pedrera",
+    color: "#f97316",
+    puntos: [
+      [22.392, -97.938],
+      [22.381, -97.927],
+      [22.371, -97.915],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 43 - Monte Alto / Pedrera / Tampico",
+    color: "#e11d48",
+    puntos: [
+      [22.417, -97.922],
+      [22.404, -97.912],
+      [22.36, -97.886],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 44 - Altamira Centro / Santa Elena / Tampico",
+    color: "#6366f1",
+    puntos: [
+      [22.392, -97.938],
+      [22.373, -97.918],
+      [22.336, -97.889],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 45 - Altamira Centro / Unidos Avanzamos",
+    color: "#84cc16",
+    puntos: [
+      [22.392, -97.938],
+      [22.402, -97.951],
+      [22.4135, -97.9625],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 46 - Altamira Centro / Los Prados / Monte Alto",
+    color: "#0ea5e9",
+    puntos: [
+      [22.392, -97.938],
+      [22.405, -97.933],
+      [22.418, -97.924],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 47 - Altamira Centro / Laguna de la Puerta",
+    color: "#a855f7",
+    puntos: [
+      [22.392, -97.938],
+      [22.3815, -97.951],
+      [22.372, -97.965],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 48 - Altamira / Puerto Industrial",
+    color: "#f43f5e",
+    puntos: [
+      [22.392, -97.938],
+      [22.43, -97.9],
+      [22.46, -97.875],
+    ],
+  },
+  {
+    zona: "Zona Norte / Altamira",
+    nombre: "Ruta 49 - Monte Alto / Puerto Industrial",
+    color: "#14b8a6",
+    puntos: [
+      [22.417, -97.922],
+      [22.438, -97.902],
+      [22.46, -97.875],
+    ],
+  },
 ];
 
 function BusAnimado({ bus }: { bus: Bus }) {

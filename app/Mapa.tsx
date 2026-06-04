@@ -43,7 +43,7 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
-type EstiloMapa = "navegacion" | "normal" | "nocturno" | "barrio";
+type EstiloMapa = "navegacion" | "gtaNeon" | "normal" | "nocturno" | "barrio";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -84,6 +84,11 @@ const MAPAS_DISPONIBLES: Record<
   navegacion: {
     label: "Navegación",
     url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
+  },
+  gtaNeon: {
+    label: "GTA neón",
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attribution: "&copy; OpenStreetMap &copy; CARTO",
   },
   normal: {
@@ -285,6 +290,23 @@ function obtenerEtiquetaTipoRuta(tipo: TipoRuta | null) {
 function obtenerTipoRuta(ruta: Ruta): TipoRuta {
   return /^ruta\s+\d+/i.test(ruta.nombre) ? "urbano" : "micro-local";
 }
+
+function obtenerNumeroRuta(nombre: string) {
+  const match = nombre.match(/ruta\s+(\d+)/i);
+
+  return match ? match[1] : null;
+}
+
+function obtenerTituloRutaNorte(nombre: string) {
+  return nombre
+    .replace(/^Ruta\s+\d+\s*-\s*/i, "")
+    .replace(/\s*\/\s*/g, " / ");
+}
+
+const RUTAS_ZONA_NORTE_FUTURAS = [
+  "Altamira Norte Express",
+  "Altamira Puerto Industrial",
+];
 
 const busIcon = new L.DivIcon({
   html: `
@@ -983,6 +1005,14 @@ export default function Mapa({
     });
   }, [tipoRutaSeleccionado, zonaSeleccionada]);
 
+  const rutasParaMostrar = useMemo(() => {
+    if (zonaSeleccionada === "Zona Norte / Altamira") {
+      return rutas.filter((ruta) => ruta.zona === zonaSeleccionada);
+    }
+
+    return rutasDeZona;
+  }, [rutasDeZona, zonaSeleccionada]);
+
   const busesFiltrados = useMemo(() => {
     if (!rutaSeleccionada) return [];
 
@@ -999,9 +1029,10 @@ export default function Mapa({
   const mapaActual = MAPAS_DISPONIBLES[estiloMapa];
   const kilometrosUsuario = obtenerNumero(usuarioKm.kmTotales);
   const nocturnoDesbloqueado = kilometrosUsuario >= 100;
-  const rutaMapaSeleccionada = rutasDeZona.find(
+  const rutaMapaSeleccionada = rutas.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
+  const esZonaNorte = zonaSeleccionada === "Zona Norte / Altamira";
 
   useEffect(() => {
     if (estiloMapa === "nocturno" && !nocturnoDesbloqueado) {
@@ -1302,18 +1333,12 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Zona Norte / Altamira")}
-          style={{
-            padding: 22,
-            borderRadius: 20,
-            border: "none",
-            background: "#2563eb",
-            color: "white",
-            fontSize: 22,
-            fontWeight: 800,
-            cursor: "pointer",
-          }}
+          className="rt-zone-norte-button"
         >
-          📍 Zona Norte
+          <span className="rt-zone-norte-button__icon">🌴</span>
+          <span className="rt-zone-norte-button__text">Zona Norte</span>
+          <span className="rt-zone-norte-button__car" aria-hidden="true" />
+          <span className="rt-zone-norte-button__arrow">›</span>
         </button>
 
         <button
@@ -1337,6 +1362,72 @@ export default function Mapa({
   }
 
   if (pantallaFlujo === "rutas") {
+    if (esZonaNorte) {
+      return (
+        <div className="rt-gta-routes-screen">
+          <div className="rt-gta-routes-screen__glow" />
+
+          <div className="rt-gta-routes-header">
+            <button
+              type="button"
+              onClick={regresarAZonas}
+              className="rt-gta-back"
+            >
+              ← Volver
+            </button>
+            <div>
+              <span>Rutas Tampico MAFA</span>
+              <h1>Zona Norte</h1>
+              <p>Selecciona tu ruta</p>
+            </div>
+          </div>
+
+          <div className="rt-gta-route-grid">
+            {rutasParaMostrar.map((ruta, index) => {
+              const usuariosRuta = conteoUsuariosPorRuta[ruta.nombre] || 0;
+              const numeroRuta = obtenerNumeroRuta(ruta.nombre) || `${101 + index}`;
+
+              return (
+                <button
+                  key={ruta.nombre}
+                  onClick={() => seleccionarRuta(ruta.nombre)}
+                  className={`rt-gta-route-card rt-gta-route-card--${index % 6}`}
+                  style={{ "--rt-card-accent": ruta.color } as React.CSSProperties}
+                >
+                  <span className="rt-gta-route-card__badge">
+                    Ruta {numeroRuta}
+                  </span>
+                  <span className="rt-gta-route-card__skyline" />
+                  <span className="rt-gta-route-card__sun" />
+                  <span className="rt-gta-route-card__palms" aria-hidden="true">
+                    🌴
+                  </span>
+                  <span className="rt-gta-route-card__vehicle" />
+                  <strong>{obtenerTituloRutaNorte(ruta.nombre)}</strong>
+                  <small>👥 {usuariosRuta} usuarios en esta ruta</small>
+                </button>
+              );
+            })}
+
+            {RUTAS_ZONA_NORTE_FUTURAS.map((rutaFutura, index) => (
+              <div
+                key={rutaFutura}
+                className="rt-gta-route-card rt-gta-route-card--locked"
+              >
+                <span className="rt-gta-route-card__badge">
+                  Ruta {201 + index}
+                </span>
+                <span className="rt-gta-route-card__skyline" />
+                <span className="rt-gta-route-card__lock">🔒</span>
+                <strong>{rutaFutura}</strong>
+                <small>Próximamente</small>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         style={{
@@ -1355,7 +1446,7 @@ export default function Mapa({
         </p>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {rutasDeZona.length === 0 && (
+          {rutasParaMostrar.length === 0 && (
             <div
               style={{
                 border: "1px solid rgba(148,163,184,.35)",
@@ -1368,7 +1459,7 @@ export default function Mapa({
             </div>
           )}
 
-          {rutasDeZona.map((ruta) => {
+          {rutasParaMostrar.map((ruta) => {
             const usuariosRuta = conteoUsuariosPorRuta[ruta.nombre] || 0;
 
             return (
@@ -1425,7 +1516,13 @@ export default function Mapa({
   }
 
   return (
-    <div className="rt-map-shell">
+    <div
+      className={
+        estiloMapa === "gtaNeon"
+          ? "rt-map-shell rt-map-shell--gta"
+          : "rt-map-shell"
+      }
+    >
       <div className="rt-map-panel">
         <div className="rt-map-panel__main">
           <div
@@ -1572,34 +1669,47 @@ export default function Mapa({
           key={estiloMapa}
           attribution={mapaActual.attribution}
           url={mapaActual.url}
+          className={`rt-map-tiles rt-map-tiles--${estiloMapa}`}
         />
 
-        {rutasDeZona
-          .filter((ruta) => ruta.nombre === rutaSeleccionada)
-          .map((ruta) => (
-            <Fragment key={ruta.nombre}>
+        {rutaMapaSeleccionada && (
+          <Fragment key={rutaMapaSeleccionada.nombre}>
               <Polyline
-                positions={ruta.puntos}
+                positions={rutaMapaSeleccionada.puntos}
                 pathOptions={{
-                  color: estiloMapa === "nocturno" ? "#020617" : "#ffffff",
-                  weight: 13,
-                  opacity: estiloMapa === "nocturno" ? 0.8 : 0.92,
+                  color:
+                    estiloMapa === "gtaNeon"
+                      ? "#ff2ca6"
+                      : estiloMapa === "nocturno"
+                        ? "#020617"
+                        : "#ffffff",
+                  weight: estiloMapa === "gtaNeon" ? 17 : 13,
+                  opacity:
+                    estiloMapa === "gtaNeon"
+                      ? 0.72
+                      : estiloMapa === "nocturno"
+                        ? 0.8
+                        : 0.92,
                   lineCap: "round",
                   lineJoin: "round",
+                  className:
+                    estiloMapa === "gtaNeon" ? "rt-route-line-gta-halo" : "",
                 }}
               />
               <Polyline
-                positions={ruta.puntos}
+                positions={rutaMapaSeleccionada.puntos}
                 pathOptions={{
-                  color: ruta.color,
-                  weight: 7,
+                  color: rutaMapaSeleccionada.color,
+                  weight: estiloMapa === "gtaNeon" ? 8 : 7,
                   opacity: 1,
                   lineCap: "round",
                   lineJoin: "round",
+                  className:
+                    estiloMapa === "gtaNeon" ? "rt-route-line-gta-core" : "",
                 }}
               />
-            </Fragment>
-          ))}
+          </Fragment>
+        )}
 
         {ubicacion && (
           <Marker position={ubicacion} icon={miUbicacionIcon}>

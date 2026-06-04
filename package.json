@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:vercel": "bash scripts/vercel-deploy.sh"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",

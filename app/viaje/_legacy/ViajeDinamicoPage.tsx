@@ -7,8 +7,9 @@ type ViajePageProps = {
 };
 
 export const dynamicParams = false;
+export const dynamic = "force-static";
 
-export function generateStaticParams() {
+export async function generateStaticParams(): Promise<Array<{ id: string }>> {
   return [];
 }
 

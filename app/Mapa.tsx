@@ -1297,6 +1297,7 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Tampico / Madero")}
+          className="rt-zone-button rt-zone-button--tampico"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1313,6 +1314,7 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Zona Norte / Altamira")}
+          className="rt-zone-button rt-zone-button--north"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1324,7 +1326,8 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          📍 Zona Norte
+          <span>🌴 Zona Norte</span>
+          <span aria-hidden="true">🚙</span>
         </button>
 
         <button
@@ -1352,12 +1355,15 @@ export default function Mapa({
       <div className={clasePantallaRutas}>
         <div className="rt-route-list-hero">
           <span className="rt-route-list-hero__eyebrow">
-            {obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
+            {esZonaNorteSeleccionada
+              ? "Rutas Tampico MAFA"
+              : obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
           </span>
           <h1>{obtenerEtiquetaZona(zonaSeleccionada)}</h1>
           <p>
-            Elige una ruta y conserva los nombres originales. Estilo Kaymax
-            cartoon listo para móvil.
+            {esZonaNorteSeleccionada
+              ? "Selecciona tu ruta"
+              : "Rutas coloridas, alegres y listas para viajar."}
           </p>
         </div>
 
@@ -1375,27 +1381,44 @@ export default function Mapa({
               <button
                 key={ruta.nombre}
                 onClick={() => seleccionarRuta(ruta.nombre)}
-                className="rt-route-card"
+                className={
+                  esZonaNorteSeleccionada
+                    ? "rt-route-card rt-route-card--north"
+                    : "rt-route-card rt-route-card--tampico"
+                }
                 style={{ "--route-color": ruta.color } as CSSProperties}
               >
                 <span className="rt-route-card__badge">
-                  {String(index + 1).padStart(2, "0")}
+                  {esZonaNorteSeleccionada
+                    ? `Ruta ${101 + index}`
+                    : String(index + 1).padStart(2, "0")}
                 </span>
                 <span className="rt-route-card__content">
                   <span className="rt-route-card__name">{ruta.nombre}</span>
                   <span className="rt-route-card__meta">
-                    <span>Bus cartoon</span>
-                    <span>{usuariosRuta} usuarios</span>
+                    <span>
+                      {usuariosRuta} usuarios en esta ruta
+                    </span>
                   </span>
                 </span>
-                <span className="rt-route-card__lights" aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                <span className="rt-route-card__arrow" aria-hidden="true">
-                  →
-                </span>
+                {esZonaNorteSeleccionada ? (
+                  <span className="rt-route-card__scene" aria-hidden="true">
+                    <span className="rt-route-card__palm">🌴</span>
+                    <span className="rt-route-card__bus">🚙</span>
+                  </span>
+                ) : (
+                  <>
+                    <span className="rt-route-card__scene" aria-hidden="true">
+                      <span className="rt-route-card__sun">☀️</span>
+                      <span className="rt-route-card__bus">🚌</span>
+                    </span>
+                    <span className="rt-route-card__lights" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </>
+                )}
               </button>
             );
           })}

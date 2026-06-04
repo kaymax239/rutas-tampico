@@ -265,17 +265,67 @@ const busIcon = new L.DivIcon({
 const miUbicacionIcon = new L.DivIcon({
   html: `
     <div style="
-      width:18px;
-      height:18px;
+      position:relative;
+      width:46px;
+      height:30px;
       background:#2563eb;
       border:3px solid white;
-      border-radius:999px;
-      box-shadow:0 0 12px rgba(37,99,235,.8);
-    "></div>
+      border-radius:9px 12px 8px 8px;
+      box-shadow:0 8px 18px rgba(37,99,235,.45);
+    ">
+      <div style="
+        position:absolute;
+        left:7px;
+        top:6px;
+        width:10px;
+        height:8px;
+        background:#bfdbfe;
+        border-radius:2px;
+      "></div>
+      <div style="
+        position:absolute;
+        left:21px;
+        top:6px;
+        width:12px;
+        height:8px;
+        background:#bfdbfe;
+        border-radius:2px;
+      "></div>
+      <div style="
+        position:absolute;
+        right:5px;
+        top:11px;
+        width:5px;
+        height:5px;
+        background:#fef3c7;
+        border-radius:999px;
+      "></div>
+      <div style="
+        position:absolute;
+        left:8px;
+        bottom:-6px;
+        width:9px;
+        height:9px;
+        background:#0f172a;
+        border:2px solid white;
+        border-radius:999px;
+      "></div>
+      <div style="
+        position:absolute;
+        right:8px;
+        bottom:-6px;
+        width:9px;
+        height:9px;
+        background:#0f172a;
+        border:2px solid white;
+        border-radius:999px;
+      "></div>
+    </div>
   `,
   className: "",
-  iconSize: [18, 18],
-  iconAnchor: [9, 9],
+  iconSize: [46, 34],
+  iconAnchor: [23, 17],
+  popupAnchor: [0, -18],
 });
 
 const rutas: Ruta[] = [

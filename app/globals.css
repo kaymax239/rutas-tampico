@@ -127,6 +127,17 @@ button {
   padding: 5px 8px;
 }
 
+.rt-map-panel__stats .rt-kaymax-stat {
+  border-color: rgba(250, 204, 21, 0.5);
+  background: linear-gradient(
+    135deg,
+    rgba(234, 179, 8, 0.34),
+    rgba(249, 115, 22, 0.26)
+  );
+  color: #fef9c3;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.18);
+}
+
 .rt-trip-actions {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -335,6 +346,141 @@ button {
   box-shadow: 0 0 18px rgba(37, 99, 235, 0.8);
 }
 
+.rt-kaymax-coin-marker {
+  position: relative;
+  width: 48px;
+  height: 58px;
+  cursor: pointer;
+  filter: drop-shadow(0 14px 14px rgba(15, 23, 42, 0.28));
+  transform-origin: 50% 80%;
+  animation:
+    rt-coin-float 1.8s ease-in-out infinite,
+    rt-coin-pulse 1.25s ease-in-out infinite;
+}
+
+.rt-kaymax-coin-marker__coin {
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 3px solid #fff7ad;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 24%, #fff8c7 0 12%, transparent 13%),
+    radial-gradient(circle at 62% 72%, #f59e0b 0 12%, transparent 13%),
+    linear-gradient(135deg, #fde047 0%, #facc15 45%, #f97316 100%);
+  box-shadow:
+    inset 0 -5px 0 rgba(146, 64, 14, 0.28),
+    inset 0 4px 0 rgba(255, 255, 255, 0.48),
+    0 0 0 5px rgba(250, 204, 21, 0.2),
+    0 0 26px rgba(250, 204, 21, 0.86);
+  overflow: hidden;
+  transform-style: preserve-3d;
+  animation: rt-coin-spin 1.05s linear infinite;
+}
+
+.rt-kaymax-coin-marker__shine {
+  position: absolute;
+  inset: -16px auto auto -18px;
+  width: 18px;
+  height: 68px;
+  background: rgba(255, 255, 255, 0.58);
+  transform: rotate(24deg);
+  animation: rt-coin-shine 1.4s ease-in-out infinite;
+}
+
+.rt-kaymax-coin-marker__value {
+  position: relative;
+  color: #713f12;
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: -0.06em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.rt-kaymax-coin-marker__spark {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 12px #fde047;
+  transform: rotate(45deg);
+  animation: rt-coin-spark 1.15s steps(2, end) infinite;
+}
+
+.rt-kaymax-coin-marker__spark--one {
+  right: 1px;
+  top: 4px;
+}
+
+.rt-kaymax-coin-marker__spark--two {
+  left: 1px;
+  top: 27px;
+  animation-delay: 0.38s;
+}
+
+.rt-kaymax-pop {
+  position: absolute;
+  top: clamp(126px, 18vh, 178px);
+  left: 50%;
+  z-index: 100000;
+  display: grid;
+  min-width: min(250px, calc(100vw - 34px));
+  place-items: center;
+  border: 3px solid #fef08a;
+  border-radius: 22px;
+  background:
+    linear-gradient(135deg, rgba(24, 24, 27, 0.94), rgba(120, 53, 15, 0.9)),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.08) 0 5px,
+      transparent 5px 10px
+    );
+  color: #ffffff;
+  padding: 13px 18px 14px;
+  pointer-events: none;
+  text-align: center;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.36),
+    0 0 34px rgba(250, 204, 21, 0.46);
+  animation: rt-kaymax-pop 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.rt-kaymax-pop__coin {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 3px solid #fff7ad;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fde047, #f59e0b);
+  color: #713f12;
+  font-size: 12px;
+  font-weight: 1000;
+  margin-bottom: 6px;
+  box-shadow: 0 0 22px rgba(250, 204, 21, 0.76);
+}
+
+.rt-kaymax-pop strong {
+  color: #fef9c3;
+  font-size: 13px;
+  font-weight: 1000;
+  letter-spacing: 0.04em;
+}
+
+.rt-kaymax-pop small {
+  color: #bae6fd;
+  font-size: 11px;
+  font-weight: 900;
+  margin-top: 3px;
+}
+
 @keyframes rt-bus-pulse {
   0% {
     opacity: 0.75;
@@ -349,6 +495,93 @@ button {
   100% {
     opacity: 0;
     transform: scale(1.55);
+  }
+}
+
+@keyframes rt-coin-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes rt-coin-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 14px 14px rgba(15, 23, 42, 0.28));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 18px 18px rgba(15, 23, 42, 0.32))
+      drop-shadow(0 0 14px rgba(250, 204, 21, 0.72));
+  }
+}
+
+@keyframes rt-coin-spin {
+  0% {
+    transform: rotateY(0deg) scaleX(1);
+  }
+
+  50% {
+    transform: rotateY(86deg) scaleX(0.56);
+  }
+
+  100% {
+    transform: rotateY(360deg) scaleX(1);
+  }
+}
+
+@keyframes rt-coin-shine {
+  0%,
+  42% {
+    transform: translateX(0) rotate(24deg);
+  }
+
+  100% {
+    transform: translateX(78px) rotate(24deg);
+  }
+}
+
+@keyframes rt-coin-spark {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: rotate(45deg) scale(0.82);
+  }
+
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.2);
+  }
+}
+
+@keyframes rt-kaymax-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.68) rotate(-3deg);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.12) rotate(2deg);
+  }
+
+  32% {
+    transform: translate(-50%, 0) scale(0.96) rotate(-1deg);
+  }
+
+  50% {
+    transform: translate(-50%, -2px) scale(1) rotate(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -30px) scale(0.86);
   }
 }
 
@@ -403,10 +636,31 @@ button {
   .rt-map-style-menu {
     width: min(244px, calc(100vw - 24px));
   }
+
+  .rt-kaymax-coin-marker {
+    width: 42px;
+    height: 52px;
+  }
+
+  .rt-kaymax-coin-marker__coin {
+    left: 5px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .rt-kaymax-pop {
+    top: 148px;
+    padding: 11px 14px 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .rt-bus-marker__pulse {
+  .rt-bus-marker__pulse,
+  .rt-kaymax-coin-marker,
+  .rt-kaymax-coin-marker__coin,
+  .rt-kaymax-coin-marker__shine,
+  .rt-kaymax-coin-marker__spark,
+  .rt-kaymax-pop {
     animation: none;
   }
 }

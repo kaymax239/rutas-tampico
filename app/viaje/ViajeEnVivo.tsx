@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db } from "../firebase";
 
 type Viaje = {
   id: string;
   nombre?: string;
   lat: number;
   lng: number;
+};
+
+type ViajeEnVivoProps = {
+  id?: string | null;
 };
 
 const MapContainer = dynamic(
@@ -33,10 +36,7 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-export default function ViajePage() {
-  const params = useParams();
-  const id = params?.id as string;
-
+export default function ViajeEnVivo({ id }: ViajeEnVivoProps) {
   const [viaje, setViaje] = useState<Viaje | null>(null);
 
   useEffect(() => {
@@ -59,6 +59,22 @@ export default function ViajePage() {
 
     return () => unsub();
   }, [id]);
+
+  if (!id) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontSize: "20px",
+        }}
+      >
+        No se encontro el viaje.
+      </div>
+    );
+  }
 
   if (!viaje) {
     return (

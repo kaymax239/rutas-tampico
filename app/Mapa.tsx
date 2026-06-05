@@ -1038,14 +1038,30 @@ export default function Mapa({
   const [pantallaFlujo, setPantallaFlujo] = useState<PantallaFlujo>(
     modoUsuario === "chofer" ? "tipos" : "zonas"
   );
-  const [userId, setUserId] = useState<string | null>(null);
-  const [viajeActivo, setViajeActivo] = useState<ViajeActivo | null>(null);
+  const [estadoSesionInicial] = useState(() => {
+    if (typeof window === "undefined") {
+      return { userId: null, viajeActivo: null };
+    }
+
+    return {
+      userId: obtenerOCrearUserId(),
+      viajeActivo: leerViajeActivo(),
+    };
+  });
+  const [userId, setUserId] = useState<string | null>(
+    estadoSesionInicial.userId
+  );
+  const [viajeActivo, setViajeActivo] = useState<ViajeActivo | null>(
+    estadoSesionInicial.viajeActivo
+  );
   const [usuarioKm, setUsuarioKm] = useState<UsuarioKm>(USUARIO_KM_INICIAL);
   const [procesandoViaje, setProcesandoViaje] = useState(false);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
-  const [mostrarMapaAventura, setMostrarMapaAventura] = useState(false);
+  const [mostrarMapaAventura, setMostrarMapaAventura] = useState(
+    Boolean(estadoSesionInicial.viajeActivo)
+  );
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1077,15 +1093,6 @@ export default function Mapa({
     });
 
     return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    const id = obtenerOCrearUserId();
-    const viajeGuardado = leerViajeActivo();
-
-    setUserId(id);
-    setViajeActivo(viajeGuardado);
-    setMostrarMapaAventura(Boolean(viajeGuardado));
   }, []);
 
   useEffect(() => {
@@ -1140,18 +1147,15 @@ export default function Mapa({
   const usuariosRutaSeleccionada = rutaSeleccionada
     ? conteoUsuariosPorRuta[rutaSeleccionada] || 0
     : 0;
-  const mapaActual = MAPAS_DISPONIBLES[estiloMapa];
   const kilometrosUsuario = obtenerNumero(usuarioKm.kmTotales);
   const nocturnoDesbloqueado = kilometrosUsuario >= 100;
+  const estiloMapaAplicado =
+    estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "navegacion" : estiloMapa;
+  const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
 
-  useEffect(() => {
-    if (estiloMapa === "nocturno" && !nocturnoDesbloqueado) {
-      setEstiloMapa("navegacion");
-    }
-  }, [estiloMapa, nocturnoDesbloqueado]);
 
   const seleccionarTipoRuta = (tipo: TipoRuta) => {
     setTipoRutaSeleccionado(tipo);
@@ -1658,7 +1662,7 @@ export default function Mapa({
                     setMostrarOpcionesMapa(false);
                   }}
                   className={
-                    estiloMapa === mapa
+                    estiloMapaAplicado === mapa
                       ? "rt-map-style-option rt-map-style-option--active"
                       : "rt-map-style-option"
                   }
@@ -1720,7 +1724,7 @@ export default function Mapa({
         <AjustarMapa ubicacion={ubicacion} />
 
         <TileLayer
-          key={estiloMapa}
+          key={estiloMapaAplicado}
           attribution={mapaActual.attribution}
           url={mapaActual.url}
         />
@@ -1732,9 +1736,9 @@ export default function Mapa({
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: estiloMapa === "nocturno" ? "#020617" : "#ffffff",
+                  color: estiloMapaAplicado === "nocturno" ? "#020617" : "#ffffff",
                   weight: 13,
-                  opacity: estiloMapa === "nocturno" ? 0.8 : 0.92,
+                  opacity: estiloMapaAplicado === "nocturno" ? 0.8 : 0.92,
                   lineCap: "round",
                   lineJoin: "round",
                 }}

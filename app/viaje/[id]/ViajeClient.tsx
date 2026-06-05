@@ -102,8 +102,8 @@ export default function ViajeClient() {
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
-            attribution="&copy; OpenStreetMap"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="&copy; OpenStreetMap &copy; CARTO"
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png"
           />
 
           <Marker position={[viaje.lat, viaje.lng]}>

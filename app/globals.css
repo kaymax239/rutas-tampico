@@ -17,12 +17,16 @@ button {
   min-height: 100svh;
   position: relative;
   overflow: hidden;
-  background: #dbeafe;
+  background: #eef3f7;
 }
 
 .rt-map-shell .leaflet-container {
-  background: #dbeafe;
+  background: #eef3f7;
   font-family: inherit;
+}
+
+.rt-map-shell .leaflet-tile-pane {
+  filter: saturate(0.78) contrast(1.06) brightness(1.04);
 }
 
 .rt-map-shell .leaflet-control-attribution {

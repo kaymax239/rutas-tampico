@@ -44,6 +44,7 @@ type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
 type EstiloMapa = "navegacion" | "normal" | "nocturno" | "barrio";
+type SkinMapaAventuraId = "barrio" | "nocturno" | "nautico" | "neon" | "dorado";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -66,6 +67,12 @@ type UsuarioKm = {
   viajesTotales: number;
   nivel: string;
   ultimoViaje: string | null;
+};
+
+type SkinMapaAventura = {
+  id: SkinMapaAventuraId;
+  nombre: string;
+  kmRequeridos: number;
 };
 
 const USER_ID_STORAGE_KEY = "rutasKaymax.userId";
@@ -103,6 +110,13 @@ const MAPAS_DISPONIBLES: Record<
     attribution: "&copy; OpenStreetMap contributors, Tiles style by HOT",
   },
 };
+const SKINS_MAPA_AVENTURA: SkinMapaAventura[] = [
+  { id: "barrio", nombre: "Mapa Barrio", kmRequeridos: 0 },
+  { id: "nocturno", nombre: "Mapa Nocturno", kmRequeridos: 100 },
+  { id: "nautico", nombre: "Mapa Náutico", kmRequeridos: 200 },
+  { id: "neon", nombre: "Mapa Neón", kmRequeridos: 300 },
+  { id: "dorado", nombre: "Mapa Premium Dorado", kmRequeridos: 400 },
+];
 
 function crearUserId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -241,6 +255,26 @@ function obtenerNumero(value: unknown) {
   const numero = Number(value);
 
   return Number.isFinite(numero) ? numero : 0;
+}
+
+function obtenerSkinMapaAventura(kmTotales: number) {
+  const kmSeguros = Math.max(0, kmTotales);
+
+  return (
+    [...SKINS_MAPA_AVENTURA]
+      .reverse()
+      .find((skin) => kmSeguros >= skin.kmRequeridos) || SKINS_MAPA_AVENTURA[0]
+  );
+}
+
+function obtenerProximoSkinMapaAventura(kmTotales: number) {
+  const kmSeguros = Math.max(0, kmTotales);
+
+  return SKINS_MAPA_AVENTURA.find((skin) => kmSeguros < skin.kmRequeridos) || null;
+}
+
+function calcularMonedasAventura(kmTotales: number) {
+  return Math.floor(Math.max(0, kmTotales) * 10);
 }
 
 function normalizarUltimoViaje(value: unknown) {
@@ -870,6 +904,112 @@ function BusAnimado({ bus }: { bus: Bus }) {
   );
 }
 
+function MapaAventura({
+  kmTotales,
+  ruta,
+}: {
+  kmTotales: number;
+  ruta: string;
+}) {
+  const skinActual = obtenerSkinMapaAventura(kmTotales);
+  const proximoSkin = obtenerProximoSkinMapaAventura(kmTotales);
+  const monedas = calcularMonedasAventura(kmTotales);
+  const kmFaltantes = proximoSkin
+    ? Math.max(0, proximoSkin.kmRequeridos - kmTotales)
+    : 0;
+
+  return (
+    <div
+      className={`rt-adventure-map rt-adventure-map--${skinActual.id}`}
+      aria-label="Mapa Aventura"
+    >
+      <div className="rt-adventure-scene" aria-hidden="true">
+        <div className="rt-adventure-water" />
+
+        <div className="rt-adventure-skyline">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <span key={`building-${index}`} className="rt-adventure-building">
+              {Array.from({ length: 4 }).map((__, windowIndex) => (
+                <i key={`window-${index}-${windowIndex}`} />
+              ))}
+            </span>
+          ))}
+        </div>
+
+        <div className="rt-adventure-road rt-adventure-road--main" />
+        <div className="rt-adventure-road rt-adventure-road--cross" />
+        <div className="rt-adventure-road-line rt-adventure-road-line--main" />
+        <div className="rt-adventure-road-line rt-adventure-road-line--cross" />
+
+        <div className="rt-adventure-trees">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <span key={`tree-${index}`} className="rt-adventure-tree" />
+          ))}
+        </div>
+
+        <div className="rt-adventure-coins">
+          {Array.from({ length: 9 }).map((_, index) => (
+            <span key={`coin-${index}`} className="rt-adventure-coin" />
+          ))}
+        </div>
+
+        <div className="rt-adventure-bus">
+          <span className="rt-adventure-bus__window" />
+          <span className="rt-adventure-bus__window" />
+          <span className="rt-adventure-bus__door" />
+          <span className="rt-adventure-bus__wheel rt-adventure-bus__wheel--front" />
+          <span className="rt-adventure-bus__wheel rt-adventure-bus__wheel--back" />
+        </div>
+      </div>
+
+      <div className="rt-adventure-hud">
+        <div>
+          <span className="rt-adventure-kicker">Mapa Aventura</span>
+          <strong>{ruta || "Ruta activa"}</strong>
+        </div>
+
+        <div className="rt-adventure-counters">
+          <span>{kmTotales.toFixed(2)} km acumulados</span>
+          <span>{monedas.toLocaleString("es-MX")} monedas</span>
+          <span>Skin actual: {skinActual.nombre}</span>
+          <span>
+            Próximo skin:{" "}
+            {proximoSkin
+              ? `${proximoSkin.nombre} en ${kmFaltantes.toFixed(2)} km`
+              : "Todos desbloqueados"}
+          </span>
+        </div>
+
+        <div className="rt-adventure-skins" aria-label="Skins de Mapa Aventura">
+          {SKINS_MAPA_AVENTURA.map((skin) => {
+            const desbloqueado = kmTotales >= skin.kmRequeridos;
+            const activo = skin.id === skinActual.id;
+
+            return (
+              <div
+                key={skin.id}
+                className={[
+                  "rt-adventure-skin",
+                  desbloqueado
+                    ? "rt-adventure-skin--unlocked"
+                    : "rt-adventure-skin--locked",
+                  activo ? "rt-adventure-skin--active" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <span>{desbloqueado ? "✓" : "🔒"}</span>
+                <strong>{skin.nombre}</strong>
+                <small>{skin.kmRequeridos} km</small>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AjustarMapa({ ubicacion }: { ubicacion: [number, number] | null }) {
   const map = useMap();
 
@@ -905,6 +1045,7 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
+  const [mostrarMapaAventura, setMostrarMapaAventura] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -940,8 +1081,11 @@ export default function Mapa({
 
   useEffect(() => {
     const id = obtenerOCrearUserId();
+    const viajeGuardado = leerViajeActivo();
+
     setUserId(id);
-    setViajeActivo(leerViajeActivo());
+    setViajeActivo(viajeGuardado);
+    setMostrarMapaAventura(Boolean(viajeGuardado));
   }, []);
 
   useEffect(() => {
@@ -1071,6 +1215,7 @@ export default function Mapa({
 
     if (viajeActivo || viajeGuardado) {
       setViajeActivo(viajeGuardado || viajeActivo);
+      setMostrarMapaAventura(true);
       alert("Ya tienes un viaje activo. Finalízalo antes de iniciar otro.");
       return;
     }
@@ -1093,6 +1238,7 @@ export default function Mapa({
 
       guardarViajeActivo(viaje);
       setViajeActivo(viaje);
+      setMostrarMapaAventura(true);
       setUbicacion([pos.coords.latitude, pos.coords.longitude]);
       alert("Viaje iniciado");
     } catch {
@@ -1167,6 +1313,7 @@ export default function Mapa({
 
       limpiarViajeActivo();
       setViajeActivo(null);
+      setMostrarMapaAventura(false);
       setUbicacion([latFin, lngFin]);
       alert(`Viaje finalizado. Sumaste ${kmCalculados.toFixed(2)} km.`);
     } catch {
@@ -1558,6 +1705,10 @@ export default function Mapa({
           <span>GPS</span>
         </button>
       </div>
+
+      {mostrarMapaAventura && viajeActivo && (
+        <MapaAventura kmTotales={kilometrosUsuario} ruta={viajeActivo.ruta} />
+      )}
 
       <MapContainer
         center={[22.2553, -97.8686]}

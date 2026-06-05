@@ -49,7 +49,7 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
-type EstiloMapa = "navegacion" | "normal" | "nocturno" | "barrio";
+type EstiloMapa = "nocturno" | "barrio";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -87,16 +87,6 @@ const MAPAS_DISPONIBLES: Record<
   EstiloMapa,
   { label: string; url: string; attribution: string; premium?: boolean }
 > = {
-  navegacion: {
-    label: "Navegación",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-  },
-  normal: {
-    label: "Mapa normal",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-  },
   nocturno: {
     label: "Mapa nocturno",
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
@@ -910,7 +900,7 @@ export default function Mapa({
   const [procesandoViaje, setProcesandoViaje] = useState(false);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
-  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
+  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1016,7 +1006,7 @@ export default function Mapa({
 
   useEffect(() => {
     if (estiloMapa === "nocturno" && !nocturnoDesbloqueado) {
-      setEstiloMapa("navegacion");
+      setEstiloMapa("barrio");
     }
   }, [estiloMapa, nocturnoDesbloqueado]);
 

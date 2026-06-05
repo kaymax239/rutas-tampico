@@ -83,7 +83,7 @@ const MAPAS_DISPONIBLES: Record<
 > = {
   navegacion: {
     label: "Navegación",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png",
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
     attribution: "&copy; OpenStreetMap &copy; CARTO",
   },
   normal: {

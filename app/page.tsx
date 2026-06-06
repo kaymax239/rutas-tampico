@@ -190,7 +190,7 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            🛡️ Pasajero Seguro
+            📍 Compartir ubicación
           </button>
 
           <button

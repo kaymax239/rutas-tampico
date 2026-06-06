@@ -924,14 +924,17 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
-  const [mostrarRecomendaciones, setMostrarRecomendaciones] = useState(true);
+  const [mostrarRecomendaciones, setMostrarRecomendaciones] = useState(false);
   const [modoPruebaRecomendaciones, setModoPruebaRecomendaciones] =
     useState(false);
+  const [mostrarPopupsDemo, setMostrarPopupsDemo] = useState(false);
+  const [demoFocusCounter, setDemoFocusCounter] = useState(0);
   const [diagnosticoRecomendaciones, setDiagnosticoRecomendaciones] =
     useState<DiagnosticoRecomendaciones>({
       total: 0,
       activas: false,
       distanciaMasCercanaMetros: null,
+      popupsVisibles: 0,
     });
 
   useEffect(() => {
@@ -1593,7 +1596,14 @@ export default function Mapa({
           <div className="rt-recommendation-controls">
             <button
               type="button"
-              onClick={() => setMostrarRecomendaciones((prev) => !prev)}
+              onClick={() => {
+                setMostrarRecomendaciones((prev) => {
+                  const next = !prev;
+                  setModoPruebaRecomendaciones(next);
+                  setMostrarPopupsDemo(false);
+                  return next;
+                });
+              }}
               className={
                 mostrarRecomendaciones
                   ? "rt-fab rt-fab--recommendations rt-fab--recommendations-active"
@@ -1608,7 +1618,7 @@ export default function Mapa({
               type="button"
               onClick={() => {
                 setMostrarRecomendaciones(true);
-                setModoPruebaRecomendaciones((prev) => !prev);
+                setModoPruebaRecomendaciones(true);
               }}
               className={
                 modoPruebaRecomendaciones
@@ -1617,6 +1627,23 @@ export default function Mapa({
               }
             >
               Probar Recs
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarRecomendaciones(true);
+                setModoPruebaRecomendaciones(true);
+                setMostrarPopupsDemo(true);
+                setDemoFocusCounter((prev) => prev + 1);
+              }}
+              className={
+                mostrarPopupsDemo
+                  ? "rt-recommendation-test-button rt-recommendation-test-button--active"
+                  : "rt-recommendation-test-button"
+              }
+            >
+              Mostrar Popups Demo
             </button>
           </div>
         )}
@@ -1630,6 +1657,8 @@ export default function Mapa({
           <span>
             Recs activas: {diagnosticoRecomendaciones.activas ? "sí" : "no"}
           </span>
+          <span>Negocios cargados: {diagnosticoRecomendaciones.total}</span>
+          <span>Popups visibles: {diagnosticoRecomendaciones.popupsVisibles}</span>
           <span>
             Distancia al negocio más cercano:{" "}
             {diagnosticoRecomendaciones.distanciaMasCercanaMetros === null
@@ -1666,7 +1695,9 @@ export default function Mapa({
           rutaSeleccionada={rutaSeleccionada}
           userPosition={ubicacion}
           buses={busesFiltrados}
-          testMode={modoPruebaRecomendaciones}
+          testMode={modoPruebaRecomendaciones || mostrarRecomendaciones}
+          demoMode={mostrarPopupsDemo}
+          demoFocusCounter={demoFocusCounter}
           onDiagnosticChange={setDiagnosticoRecomendaciones}
         />
 

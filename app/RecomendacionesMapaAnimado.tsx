@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Marker } from "react-leaflet";
+import { Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import {
   recomendacionesCircuitoNorte,
@@ -20,6 +20,7 @@ export type DiagnosticoRecomendaciones = {
   total: number;
   activas: boolean;
   distanciaMasCercanaMetros: number | null;
+  popupsVisibles: number;
 };
 
 type RecomendacionesMapaAnimadoProps = {
@@ -28,11 +29,15 @@ type RecomendacionesMapaAnimadoProps = {
   userPosition: Position | null;
   buses: PuntoCercano[];
   testMode?: boolean;
+  demoMode?: boolean;
+  demoFocusCounter?: number;
   onDiagnosticChange?: (diagnostico: DiagnosticoRecomendaciones) => void;
 };
 
 const RADIO_RECOMENDACION_METROS = 100;
 const MAX_POPUPS_VISIBLES = 3;
+const TACOS_EL_CHINO_ID = "tacos-el-chino";
+const DEMO_ZOOM = 18;
 
 function obtenerEmojiTipo(tipo: TipoRecomendacion) {
   if (tipo === "tacos") return "🌮";
@@ -103,8 +108,11 @@ export default function RecomendacionesMapaAnimado({
   userPosition,
   buses,
   testMode = false,
+  demoMode = false,
+  demoFocusCounter = 0,
   onDiagnosticChange,
 }: RecomendacionesMapaAnimadoProps) {
+  const map = useMap();
   const esCircuitoNorte = rutaSeleccionada
     .toLowerCase()
     .includes("circuito norte");
@@ -147,13 +155,26 @@ export default function RecomendacionesMapaAnimado({
 
   const distanciaMasCercanaMetros =
     recomendacionesConDistancia[0]?.distanciaMetros ?? null;
-  const recomendacionesCercanas = testMode
+  const mostrarTodosLosPopups = testMode || demoMode;
+  const recomendacionesCercanas = mostrarTodosLosPopups
     ? recomendacionesConDistancia.slice(0, recomendacionesCircuitoNorte.length)
     : recomendacionesConDistancia
         .filter(
           (item) => item.distanciaMetros <= RADIO_RECOMENDACION_METROS
         )
         .slice(0, MAX_POPUPS_VISIBLES);
+  const popupTacosDemo = recomendacionesConDistancia.find(
+    (item) => item.recomendacion.id === TACOS_EL_CHINO_ID
+  );
+  const recomendacionesVisibles =
+    recomendacionesCercanas.length > 0
+      ? recomendacionesCercanas
+      : popupTacosDemo
+        ? [popupTacosDemo]
+        : [];
+  const tacosElChino = recomendacionesCircuitoNorte.find(
+    (recomendacion) => recomendacion.id === TACOS_EL_CHINO_ID
+  );
 
   useEffect(() => {
     onDiagnosticChange?.({
@@ -162,8 +183,23 @@ export default function RecomendacionesMapaAnimado({
       distanciaMasCercanaMetros: Number.isFinite(distanciaMasCercanaMetros ?? NaN)
         ? distanciaMasCercanaMetros
         : null,
+      popupsVisibles: recomendacionesVisibles.length,
     });
-  }, [active, distanciaMasCercanaMetros, onDiagnosticChange]);
+  }, [
+    active,
+    distanciaMasCercanaMetros,
+    onDiagnosticChange,
+    recomendacionesVisibles.length,
+  ]);
+
+  useEffect(() => {
+    if (!active || !esCircuitoNorte || !demoMode || !tacosElChino) return;
+
+    map.flyTo([tacosElChino.lat, tacosElChino.lng], DEMO_ZOOM, {
+      duration: 1.1,
+      easeLinearity: 0.22,
+    });
+  }, [active, demoFocusCounter, demoMode, esCircuitoNorte, map, tacosElChino]);
 
   if (!active || !esCircuitoNorte) return null;
 
@@ -178,7 +214,7 @@ export default function RecomendacionesMapaAnimado({
         />
       ))}
 
-      {recomendacionesCercanas.map((item) => (
+      {recomendacionesVisibles.map((item) => (
           <Marker
             key={`popup-${item.recomendacion.id}`}
             position={[item.recomendacion.lat, item.recomendacion.lng]}

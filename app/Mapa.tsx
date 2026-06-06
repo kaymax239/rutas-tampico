@@ -1577,7 +1577,7 @@ export default function Mapa({
           <span>GPS</span>
         </button>
 
-        {mapaAnimadoActivo && onCompartirUbicacion && (
+        {onCompartirUbicacion && (
           <button
             type="button"
             onClick={onCompartirUbicacion}

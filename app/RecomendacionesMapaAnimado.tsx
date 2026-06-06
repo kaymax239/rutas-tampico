@@ -91,8 +91,9 @@ function crearPopupRecomendacionIcon(
     html: `
       <div class="rt-recommendation-popup-card" aria-hidden="true">
         <strong>${obtenerEmojiTipo(recomendacion.tipo)} ${recomendacion.nombre}</strong>
-        <span>${recomendacion.precio} barato</span>
-        <span>${recomendacion.calidad} rico</span>
+        <span>Tipo: ${recomendacion.tipo}</span>
+        <span>Precio: ${recomendacion.precio}</span>
+        <span>Calidad: ${recomendacion.calidad}</span>
         <small>${distancia}</small>
       </div>
     `,

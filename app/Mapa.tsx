@@ -29,6 +29,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import AnimatedNavigationMap from "./AnimatedNavigationMap";
+import RecomendacionesMapaAnimado from "./RecomendacionesMapaAnimado";
 import { db } from "./firebase";
 
 type Bus = {
@@ -1025,6 +1026,11 @@ export default function Mapa({
     estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "barrio" : estiloMapa;
   const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
   const mapaAnimadoActivo = estiloMapaAplicado === "animado";
+  const rutaNormalizada = rutaSeleccionada.toLowerCase();
+  const rutaConRecomendaciones =
+    mapaAnimadoActivo &&
+    (rutaNormalizada.includes("circuito norte") ||
+      rutaNormalizada.includes("tampico norte"));
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
@@ -1683,6 +1689,13 @@ export default function Mapa({
         <AnimatedNavigationMap
           active={mapaAnimadoActivo}
           onLocationChange={setUbicacion}
+        />
+
+        <RecomendacionesMapaAnimado
+          active={rutaConRecomendaciones}
+          rutaSeleccionada={rutaSeleccionada}
+          userPosition={ubicacion}
+          buses={busesFiltrados}
         />
 
         {rutasDeZona

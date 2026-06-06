@@ -351,6 +351,29 @@ button {
   box-shadow: 0 5px 0 rgba(15, 23, 42, 0.16);
 }
 
+.rt-cartoon-route-button--zone {
+  text-align: center !important;
+}
+
+.rt-cartoon-route-button__title--center {
+  justify-content: center;
+}
+
+.rt-cartoon-route-outline {
+  filter: drop-shadow(0 8px 0 rgba(15, 23, 42, 0.2));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rt-cartoon-route-line {
+  filter:
+    drop-shadow(0 0 6px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 6px 0 rgba(15, 23, 42, 0.18));
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: rt-cartoon-route-glow 2.4s ease-in-out infinite;
+}
+
 .rt-bus-marker {
   position: relative;
   width: 56px;
@@ -475,6 +498,17 @@ button {
   }
 }
 
+@keyframes rt-cartoon-route-glow {
+  0%,
+  100% {
+    stroke-width: 7px;
+  }
+
+  50% {
+    stroke-width: 9px;
+  }
+}
+
 @media (max-width: 520px) {
   .rt-map-panel {
     border-radius: 18px;
@@ -541,7 +575,8 @@ button {
   .rt-map-shell--animated::before,
   .rt-map-cloud,
   .rt-map-coin,
-  .rt-map-mini-bus {
+  .rt-map-mini-bus,
+  .rt-cartoon-route-line {
     animation: none;
   }
 }

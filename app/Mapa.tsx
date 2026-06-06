@@ -1291,6 +1291,7 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Tampico / Madero")}
+          className="rt-cartoon-route-button rt-cartoon-route-button--zone"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1302,11 +1303,15 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          📍 Tampico / Madero
+          <span className="rt-cartoon-route-button__title rt-cartoon-route-button__title--center">
+            <span className="rt-cartoon-route-button__icon">📍</span>
+            <span>Tampico / Madero</span>
+          </span>
         </button>
 
         <button
           onClick={() => cambiarZona("Zona Norte / Altamira")}
+          className="rt-cartoon-route-button rt-cartoon-route-button--zone"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1318,7 +1323,10 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          📍 Zona Norte
+          <span className="rt-cartoon-route-button__title rt-cartoon-route-button__title--center">
+            <span className="rt-cartoon-route-button__icon">📍</span>
+            <span>Zona Norte</span>
+          </span>
         </button>
 
         <button
@@ -1603,6 +1611,7 @@ export default function Mapa({
                   opacity: estiloMapaAplicado === "nocturno" ? 0.8 : 0.92,
                   lineCap: "round",
                   lineJoin: "round",
+                  className: "rt-cartoon-route-outline",
                 }}
               />
               <Polyline
@@ -1613,6 +1622,7 @@ export default function Mapa({
                   opacity: 1,
                   lineCap: "round",
                   lineJoin: "round",
+                  className: "rt-cartoon-route-line",
                 }}
               />
             </Fragment>

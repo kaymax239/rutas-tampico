@@ -571,6 +571,120 @@ button {
   font-family: inherit;
 }
 
+.rt-map-shell--premium-animated .leaflet-container {
+  background: #020617;
+}
+
+.rt-premium-map-animation {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.rt-premium-map-animation::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(circle at 22% 24%, rgba(34, 211, 238, 0.28), transparent 0 16%, transparent 28%),
+    radial-gradient(circle at 78% 68%, rgba(59, 130, 246, 0.22), transparent 0 18%, transparent 32%),
+    linear-gradient(135deg, rgba(2, 6, 23, 0.34), rgba(8, 47, 73, 0.18));
+  mix-blend-mode: screen;
+}
+
+.rt-premium-map-animation__grid {
+  position: absolute;
+  inset: -20%;
+  background-image:
+    linear-gradient(rgba(34, 211, 238, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.14) 1px, transparent 1px);
+  background-size: 42px 42px;
+  opacity: 0.38;
+  transform: rotate(-12deg);
+  animation: rt-premium-map-grid 14s linear infinite;
+}
+
+.rt-premium-map-animation__pulse {
+  position: absolute;
+  width: 92px;
+  height: 92px;
+  border: 2px solid rgba(125, 211, 252, 0.72);
+  border-radius: 999px;
+  box-shadow: 0 0 28px rgba(34, 211, 238, 0.34);
+  animation: rt-premium-map-pulse 2.8s ease-out infinite;
+}
+
+.rt-premium-map-animation__pulse--one {
+  left: 18%;
+  top: 38%;
+}
+
+.rt-premium-map-animation__pulse--two {
+  right: 16%;
+  top: 58%;
+  animation-delay: 1.1s;
+}
+
+.rt-premium-map-animation__pin {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #ffffff;
+  border-radius: 999px 999px 999px 0;
+  background: #22d3ee;
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.92);
+  transform: rotate(-45deg);
+  animation: rt-premium-map-pin 2.2s ease-in-out infinite;
+}
+
+.rt-premium-map-animation__pin--one {
+  left: 22%;
+  top: 39%;
+}
+
+.rt-premium-map-animation__pin--two {
+  right: 20%;
+  top: 59%;
+  animation-delay: 0.75s;
+}
+
+.rt-premium-map-animation__car {
+  position: absolute;
+  left: -72px;
+  bottom: 24%;
+  width: 58px;
+  height: 34px;
+  border: 3px solid rgba(255, 255, 255, 0.94);
+  border-radius: 18px 18px 12px 12px;
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  box-shadow:
+    0 0 24px rgba(56, 189, 248, 0.72),
+    0 12px 24px rgba(15, 23, 42, 0.3);
+  animation: rt-premium-map-car 8.5s ease-in-out infinite;
+}
+
+.rt-premium-map-animation__car::before,
+.rt-premium-map-animation__car::after {
+  position: absolute;
+  bottom: -8px;
+  width: 13px;
+  height: 13px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: #020617;
+  content: "";
+}
+
+.rt-premium-map-animation__car::before {
+  left: 9px;
+}
+
+.rt-premium-map-animation__car::after {
+  right: 9px;
+}
+
 .rt-map-shell .leaflet-control-attribution {
   border-radius: 999px 0 0 0;
   font-size: 10px;
@@ -898,6 +1012,57 @@ button {
   }
 }
 
+@keyframes rt-premium-map-grid {
+  0% {
+    background-position: 0 0, 0 0;
+  }
+
+  100% {
+    background-position: 168px 84px, 168px 84px;
+  }
+}
+
+@keyframes rt-premium-map-pulse {
+  0% {
+    opacity: 0.84;
+    transform: scale(0.55);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes rt-premium-map-pin {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-45deg);
+  }
+
+  50% {
+    transform: translateY(-8px) rotate(-45deg);
+  }
+}
+
+@keyframes rt-premium-map-car {
+  0% {
+    transform: translateX(0) translateY(0) rotate(-3deg);
+  }
+
+  48% {
+    transform: translateX(calc(100vw + 130px)) translateY(-16px) rotate(-3deg);
+  }
+
+  52% {
+    transform: translateX(calc(100vw + 130px)) translateY(-16px) rotate(-3deg) scaleX(-1);
+  }
+
+  100% {
+    transform: translateX(0) translateY(0) rotate(-3deg) scaleX(-1);
+  }
+}
+
 @media (max-width: 520px) {
   .rt-route-list-screen {
     padding-left: 12px;
@@ -1010,7 +1175,11 @@ button {
     transition: none;
   }
 
-  .rt-bus-marker__pulse {
+  .rt-bus-marker__pulse,
+  .rt-premium-map-animation__grid,
+  .rt-premium-map-animation__pulse,
+  .rt-premium-map-animation__pin,
+  .rt-premium-map-animation__car {
     animation: none;
   }
 }

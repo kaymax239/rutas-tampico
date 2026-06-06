@@ -49,7 +49,7 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
-type EstiloMapa = "nocturno" | "barrio";
+type EstiloMapa = "nocturno" | "barrio" | "animado";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -97,6 +97,11 @@ const MAPAS_DISPONIBLES: Record<
     label: "Mapa barrio",
     url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
     attribution: "&copy; OpenStreetMap contributors, Tiles style by HOT",
+  },
+  animado: {
+    label: "Mapa animado",
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
   },
 };
 
@@ -1005,6 +1010,7 @@ export default function Mapa({
   const estiloMapaAplicado =
     estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "barrio" : estiloMapa;
   const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
+  const mapaAnimadoActivo = estiloMapaAplicado === "animado";
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
@@ -1429,7 +1435,13 @@ export default function Mapa({
   }
 
   return (
-    <div className="rt-map-shell">
+    <div
+      className={
+        mapaAnimadoActivo
+          ? "rt-map-shell rt-map-shell--premium-animated"
+          : "rt-map-shell"
+      }
+    >
       <div className="rt-map-panel">
         <div className="rt-map-panel__main">
           <div
@@ -1563,6 +1575,17 @@ export default function Mapa({
         </button>
       </div>
 
+      {mapaAnimadoActivo && (
+        <div className="rt-premium-map-animation" aria-hidden="true">
+          <span className="rt-premium-map-animation__grid" />
+          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--one" />
+          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--two" />
+          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--one" />
+          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--two" />
+          <span className="rt-premium-map-animation__car" />
+        </div>
+      )}
+
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={13}
@@ -1585,8 +1608,12 @@ export default function Mapa({
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: estiloMapaAplicado === "nocturno" ? "#020617" : "#ffffff",
-                  weight: 13,
+                  color: mapaAnimadoActivo
+                    ? "#020617"
+                    : estiloMapaAplicado === "nocturno"
+                      ? "#020617"
+                      : "#ffffff",
+                  weight: mapaAnimadoActivo ? 15 : 13,
                   opacity: estiloMapaAplicado === "nocturno" ? 0.8 : 0.92,
                   lineCap: "round",
                   lineJoin: "round",
@@ -1595,8 +1622,8 @@ export default function Mapa({
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: ruta.color,
-                  weight: 7,
+                  color: mapaAnimadoActivo ? "#22d3ee" : ruta.color,
+                  weight: mapaAnimadoActivo ? 8 : 7,
                   opacity: 1,
                   lineCap: "round",
                   lineJoin: "round",

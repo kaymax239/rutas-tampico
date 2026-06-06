@@ -27,6 +27,7 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import AnimatedNavigationMap from "./AnimatedNavigationMap";
+import RecomendacionesMapaAnimado from "./RecomendacionesMapaAnimado";
 import { db } from "./firebase";
 
 type Bus = {
@@ -921,6 +922,7 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
+  const [mostrarRecomendaciones, setMostrarRecomendaciones] = useState(true);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1012,6 +1014,8 @@ export default function Mapa({
     estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "barrio" : estiloMapa;
   const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
   const mapaAnimadoActivo = estiloMapaAplicado === "animado";
+  const recomendacionesDisponibles =
+    mapaAnimadoActivo && rutaSeleccionada.toLowerCase().includes("circuito norte");
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
@@ -1574,6 +1578,21 @@ export default function Mapa({
         >
           <span>GPS</span>
         </button>
+
+        {recomendacionesDisponibles && (
+          <button
+            type="button"
+            onClick={() => setMostrarRecomendaciones((prev) => !prev)}
+            className={
+              mostrarRecomendaciones
+                ? "rt-fab rt-fab--recommendations rt-fab--recommendations-active"
+                : "rt-fab rt-fab--recommendations"
+            }
+            aria-label="Activar o desactivar recomendaciones"
+          >
+            <span>Recs</span>
+          </button>
+        )}
       </div>
 
       <MapContainer
@@ -1594,6 +1613,13 @@ export default function Mapa({
         <AnimatedNavigationMap
           active={mapaAnimadoActivo}
           onLocationChange={setUbicacion}
+        />
+
+        <RecomendacionesMapaAnimado
+          active={recomendacionesDisponibles && mostrarRecomendaciones}
+          rutaSeleccionada={rutaSeleccionada}
+          userPosition={ubicacion}
+          buses={busesFiltrados}
         />
 
         {rutasDeZona

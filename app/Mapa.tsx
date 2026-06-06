@@ -925,10 +925,6 @@ export default function Mapa({
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
   const [mostrarRecomendaciones, setMostrarRecomendaciones] = useState(false);
-  const [modoPruebaRecomendaciones, setModoPruebaRecomendaciones] =
-    useState(false);
-  const [mostrarPopupsDemo, setMostrarPopupsDemo] = useState(false);
-  const [demoFocusCounter, setDemoFocusCounter] = useState(0);
   const [diagnosticoRecomendaciones, setDiagnosticoRecomendaciones] =
     useState<DiagnosticoRecomendaciones>({
       total: 0,
@@ -1596,14 +1592,7 @@ export default function Mapa({
           <div className="rt-recommendation-controls">
             <button
               type="button"
-              onClick={() => {
-                setMostrarRecomendaciones((prev) => {
-                  const next = !prev;
-                  setModoPruebaRecomendaciones(next);
-                  setMostrarPopupsDemo(false);
-                  return next;
-                });
-              }}
+              onClick={() => setMostrarRecomendaciones((prev) => !prev)}
               className={
                 mostrarRecomendaciones
                   ? "rt-fab rt-fab--recommendations rt-fab--recommendations-active"
@@ -1612,38 +1601,6 @@ export default function Mapa({
               aria-label="Activar o desactivar recomendaciones"
             >
               <span>Recs</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarRecomendaciones(true);
-                setModoPruebaRecomendaciones(true);
-              }}
-              className={
-                modoPruebaRecomendaciones
-                  ? "rt-recommendation-test-button rt-recommendation-test-button--active"
-                  : "rt-recommendation-test-button"
-              }
-            >
-              Probar Recs
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setMostrarRecomendaciones(true);
-                setModoPruebaRecomendaciones(true);
-                setMostrarPopupsDemo(true);
-                setDemoFocusCounter((prev) => prev + 1);
-              }}
-              className={
-                mostrarPopupsDemo
-                  ? "rt-recommendation-test-button rt-recommendation-test-button--active"
-                  : "rt-recommendation-test-button"
-              }
-            >
-              Mostrar Popups Demo
             </button>
           </div>
         )}
@@ -1695,9 +1652,6 @@ export default function Mapa({
           rutaSeleccionada={rutaSeleccionada}
           userPosition={ubicacion}
           buses={busesFiltrados}
-          testMode={modoPruebaRecomendaciones || mostrarRecomendaciones}
-          demoMode={mostrarPopupsDemo}
-          demoFocusCounter={demoFocusCounter}
           onDiagnosticChange={setDiagnosticoRecomendaciones}
         />
 

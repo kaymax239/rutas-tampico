@@ -190,6 +190,23 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
+            🛡️ Pasajero Seguro
+          </button>
+
+          <button
+            onClick={abrirWhatsAppPasajeroSeguro}
+            style={{
+              width: "100%",
+              background: "#0891b2",
+              color: "white",
+              border: "none",
+              padding: 14,
+              borderRadius: 16,
+              fontSize: 16,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
             📍 Compartir ubicación
           </button>
 

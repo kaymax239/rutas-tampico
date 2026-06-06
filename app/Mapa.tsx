@@ -1155,12 +1155,11 @@ export default function Mapa({
       return;
     }
 
-    const id = userId || obtenerOCrearUserId();
-    setUserId(id);
     setProcesandoViaje(true);
 
     try {
       const pos = await obtenerPosicionActual();
+      const id = userId || obtenerOCrearUserId();
       const latInicio = pos.coords.latitude;
       const lngInicio = pos.coords.longitude;
       const viaje: ViajeActivo = {
@@ -1171,15 +1170,16 @@ export default function Mapa({
       };
 
       guardarViajeActivo(viaje);
+      setUserId(id);
       setViajeActivo(viaje);
       setUbicacion([latInicio, lngInicio]);
+      alert("Viaje iniciado");
 
       if (modoUsuario === "chofer") {
         registrarUbicacionChofer(id, rutaSeleccionada, latInicio, lngInicio);
       }
 
       iniciarSeguimientoUbicacion(id, rutaSeleccionada);
-      alert("Viaje iniciado");
     } catch {
       alert("No se pudo obtener tu ubicación. Activa el GPS y permite ubicación.");
     } finally {

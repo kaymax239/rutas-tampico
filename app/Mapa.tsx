@@ -26,6 +26,7 @@ import {
   serverTimestamp,
   type Timestamp,
 } from "firebase/firestore";
+import AnimatedNavigationMap from "./AnimatedNavigationMap";
 import { db } from "./firebase";
 
 type Bus = {
@@ -1575,17 +1576,6 @@ export default function Mapa({
         </button>
       </div>
 
-      {mapaAnimadoActivo && (
-        <div className="rt-premium-map-animation" aria-hidden="true">
-          <span className="rt-premium-map-animation__grid" />
-          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--one" />
-          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--two" />
-          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--one" />
-          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--two" />
-          <span className="rt-premium-map-animation__car" />
-        </div>
-      )}
-
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={13}
@@ -1593,12 +1583,17 @@ export default function Mapa({
         zoomControl={false}
         style={{ width: "100%", height: "100%" }}
       >
-        <AjustarMapa ubicacion={ubicacion} />
+        <AjustarMapa ubicacion={mapaAnimadoActivo ? null : ubicacion} />
 
         <TileLayer
           key={estiloMapaAplicado}
           attribution={mapaActual.attribution}
           url={mapaActual.url}
+        />
+
+        <AnimatedNavigationMap
+          active={mapaAnimadoActivo}
+          onLocationChange={setUbicacion}
         />
 
         {rutasDeZona

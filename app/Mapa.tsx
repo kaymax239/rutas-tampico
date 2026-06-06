@@ -1654,6 +1654,17 @@ export default function Mapa({
         )}
       </div>
 
+      {mapaAnimadoActivo && (
+        <div className="rt-premium-map-animation" aria-hidden="true">
+          <span className="rt-premium-map-animation__grid" />
+          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--one" />
+          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--two" />
+          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--one" />
+          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--two" />
+          <span className="rt-premium-map-animation__car" />
+        </div>
+      )}
+
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={13}

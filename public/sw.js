@@ -1,3 +1,6 @@
+const CACHE_REFRESH_VERSION = "2026-06-06-dae3047";
+self.__RUTAS_TAMPICO_CACHE_REFRESH_VERSION = CACHE_REFRESH_VERSION;
+
 self.addEventListener("install", function () {
   self.skipWaiting();
 });

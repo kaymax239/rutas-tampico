@@ -1056,6 +1056,14 @@ button {
   color: #ffffff;
 }
 
+.rt-fab--share-location {
+  min-width: 138px;
+  background: linear-gradient(135deg, #0891b2, #22d3ee);
+  color: #ffffff;
+  line-height: 1.1;
+  padding: 0 16px;
+}
+
 .rt-fab--recommendations {
   background: linear-gradient(135deg, #7c3aed, #ec4899);
   color: #ffffff;

@@ -57,6 +57,7 @@ type MapaProps = {
   conteoUsuariosPorRuta?: Record<string, number>;
   onRutaSeleccionada?: (ruta: string | null) => void;
   onRegresarInicio?: () => void;
+  onCompartirUbicacion?: () => void;
 };
 
 type MetodoCalculo = "ruta" | "haversine";
@@ -889,6 +890,7 @@ export default function Mapa({
   conteoUsuariosPorRuta = {},
   onRutaSeleccionada,
   onRegresarInicio,
+  onCompartirUbicacion,
 }: MapaProps) {
   const [buses, setBuses] = useState<Bus[]>([]);
   const [ubicacion, setUbicacion] = useState<[number, number] | null>(null);
@@ -1575,6 +1577,16 @@ export default function Mapa({
           <span>GPS</span>
         </button>
 
+        {mapaAnimadoActivo && onCompartirUbicacion && (
+          <button
+            type="button"
+            onClick={onCompartirUbicacion}
+            className="rt-fab rt-fab--share-location"
+            aria-label="Compartir ubicación"
+          >
+            <span>Compartir ubicación</span>
+          </button>
+        )}
       </div>
 
       <MapContainer

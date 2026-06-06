@@ -194,23 +194,6 @@ export default function Home() {
           </button>
 
           <button
-            onClick={abrirWhatsAppPasajeroSeguro}
-            style={{
-              width: "100%",
-              background: "#0891b2",
-              color: "white",
-              border: "none",
-              padding: 14,
-              borderRadius: 16,
-              fontSize: 16,
-              fontWeight: 800,
-              cursor: "pointer",
-            }}
-          >
-            📍 Compartir ubicación
-          </button>
-
-          <button
             onClick={llamarEmergencias}
             style={{
               width: "100%",
@@ -347,6 +330,7 @@ export default function Home() {
         conteoUsuariosPorRuta={usuariosEnLinea.byRoute}
         onRutaSeleccionada={cambiarRutaActiva}
         onRegresarInicio={volverInicio}
+        onCompartirUbicacion={abrirWhatsAppPasajeroSeguro}
       />
     </div>
   );

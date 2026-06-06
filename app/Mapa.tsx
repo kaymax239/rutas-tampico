@@ -27,9 +27,6 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import AnimatedNavigationMap from "./AnimatedNavigationMap";
-import RecomendacionesMapaAnimado, {
-  type DiagnosticoRecomendaciones,
-} from "./RecomendacionesMapaAnimado";
 import { db } from "./firebase";
 
 type Bus = {
@@ -924,14 +921,6 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
-  const [mostrarRecomendaciones, setMostrarRecomendaciones] = useState(false);
-  const [diagnosticoRecomendaciones, setDiagnosticoRecomendaciones] =
-    useState<DiagnosticoRecomendaciones>({
-      total: 0,
-      activas: false,
-      distanciaMasCercanaMetros: null,
-      popupsVisibles: 0,
-    });
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1023,8 +1012,6 @@ export default function Mapa({
     estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "barrio" : estiloMapa;
   const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
   const mapaAnimadoActivo = estiloMapaAplicado === "animado";
-  const recomendacionesDisponibles =
-    mapaAnimadoActivo && rutaSeleccionada.toLowerCase().includes("circuito norte");
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
@@ -1588,44 +1575,7 @@ export default function Mapa({
           <span>GPS</span>
         </button>
 
-        {recomendacionesDisponibles && (
-          <div className="rt-recommendation-controls">
-            <button
-              type="button"
-              onClick={() => setMostrarRecomendaciones((prev) => !prev)}
-              className={
-                mostrarRecomendaciones
-                  ? "rt-fab rt-fab--recommendations rt-fab--recommendations-active"
-                  : "rt-fab rt-fab--recommendations"
-              }
-              aria-label="Activar o desactivar recomendaciones"
-            >
-              <span>Recs</span>
-            </button>
-          </div>
-        )}
       </div>
-
-      {recomendacionesDisponibles && (
-        <div className="rt-recommendation-diagnostics">
-          <span>
-            Recomendaciones cargadas: {diagnosticoRecomendaciones.total}
-          </span>
-          <span>
-            Recs activas: {diagnosticoRecomendaciones.activas ? "sí" : "no"}
-          </span>
-          <span>Negocios cargados: {diagnosticoRecomendaciones.total}</span>
-          <span>Popups visibles: {diagnosticoRecomendaciones.popupsVisibles}</span>
-          <span>
-            Distancia al negocio más cercano:{" "}
-            {diagnosticoRecomendaciones.distanciaMasCercanaMetros === null
-              ? "-- m"
-              : `${Math.round(
-                  diagnosticoRecomendaciones.distanciaMasCercanaMetros
-                )} m`}
-          </span>
-        </div>
-      )}
 
       <MapContainer
         center={[22.2553, -97.8686]}
@@ -1645,14 +1595,6 @@ export default function Mapa({
         <AnimatedNavigationMap
           active={mapaAnimadoActivo}
           onLocationChange={setUbicacion}
-        />
-
-        <RecomendacionesMapaAnimado
-          active={recomendacionesDisponibles && mostrarRecomendaciones}
-          rutaSeleccionada={rutaSeleccionada}
-          userPosition={ubicacion}
-          buses={busesFiltrados}
-          onDiagnosticChange={setDiagnosticoRecomendaciones}
         />
 
         {rutasDeZona

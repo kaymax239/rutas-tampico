@@ -281,6 +281,76 @@ button {
   white-space: nowrap;
 }
 
+.rt-cartoon-route-button {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.78) !important;
+  box-shadow:
+    inset 0 -8px 0 rgba(15, 23, 42, 0.14),
+    0 12px 0 rgba(15, 23, 42, 0.2),
+    0 18px 30px rgba(15, 23, 42, 0.24);
+  transform: rotate(-0.6deg);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.rt-cartoon-route-button:nth-child(even) {
+  transform: rotate(0.6deg);
+}
+
+.rt-cartoon-route-button::before {
+  position: absolute;
+  top: -34px;
+  right: -24px;
+  width: 92px;
+  height: 92px;
+  border: 4px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  content: "";
+}
+
+.rt-cartoon-route-button::after {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  width: 34px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.4);
+  content: "";
+  transform: rotate(-12deg);
+}
+
+.rt-cartoon-route-button:hover,
+.rt-cartoon-route-button:focus-visible {
+  box-shadow:
+    inset 0 -6px 0 rgba(15, 23, 42, 0.12),
+    0 8px 0 rgba(15, 23, 42, 0.2),
+    0 20px 34px rgba(15, 23, 42, 0.28);
+  transform: translateY(3px) scale(1.01);
+}
+
+.rt-cartoon-route-button__title {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rt-cartoon-route-button__icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 3px solid rgba(255, 255, 255, 0.82);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 5px 0 rgba(15, 23, 42, 0.16);
+}
+
 .rt-bus-marker {
   position: relative;
   width: 56px;
@@ -335,478 +405,6 @@ button {
   box-shadow: 0 0 18px rgba(37, 99, 235, 0.8);
 }
 
-.rt-adventure-map {
-  --rt-adventure-sky: #7dd3fc;
-  --rt-adventure-ground: #86efac;
-  --rt-adventure-road: #475569;
-  --rt-adventure-road-line: #fef3c7;
-  --rt-adventure-building: #fef3c7;
-  --rt-adventure-building-side: #f97316;
-  --rt-adventure-tree: #16a34a;
-  --rt-adventure-coin: #facc15;
-  --rt-adventure-glow: rgba(250, 204, 21, 0.45);
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  overflow: hidden;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.42), transparent 0 8%, transparent 18%),
-    linear-gradient(180deg, var(--rt-adventure-sky) 0 52%, var(--rt-adventure-ground) 52% 100%);
-}
-
-.rt-adventure-map--nocturno {
-  --rt-adventure-sky: #111827;
-  --rt-adventure-ground: #1e293b;
-  --rt-adventure-road: #020617;
-  --rt-adventure-building: #334155;
-  --rt-adventure-building-side: #0f172a;
-  --rt-adventure-tree: #22c55e;
-  --rt-adventure-glow: rgba(125, 211, 252, 0.52);
-}
-
-.rt-adventure-map--nautico {
-  --rt-adventure-sky: #67e8f9;
-  --rt-adventure-ground: #bae6fd;
-  --rt-adventure-road: #0369a1;
-  --rt-adventure-building: #e0f2fe;
-  --rt-adventure-building-side: #0ea5e9;
-  --rt-adventure-tree: #0f766e;
-  --rt-adventure-glow: rgba(34, 211, 238, 0.58);
-}
-
-.rt-adventure-map--neon {
-  --rt-adventure-sky: #2e1065;
-  --rt-adventure-ground: #111827;
-  --rt-adventure-road: #0f172a;
-  --rt-adventure-road-line: #22d3ee;
-  --rt-adventure-building: #7c3aed;
-  --rt-adventure-building-side: #ec4899;
-  --rt-adventure-tree: #14b8a6;
-  --rt-adventure-coin: #f0abfc;
-  --rt-adventure-glow: rgba(236, 72, 153, 0.62);
-}
-
-.rt-adventure-map--dorado {
-  --rt-adventure-sky: #fde68a;
-  --rt-adventure-ground: #fef3c7;
-  --rt-adventure-road: #78350f;
-  --rt-adventure-road-line: #fff7ed;
-  --rt-adventure-building: #facc15;
-  --rt-adventure-building-side: #b45309;
-  --rt-adventure-tree: #65a30d;
-  --rt-adventure-coin: #fbbf24;
-  --rt-adventure-glow: rgba(251, 191, 36, 0.76);
-}
-
-.rt-adventure-scene {
-  position: absolute;
-  inset: 0;
-}
-
-.rt-adventure-water {
-  position: absolute;
-  left: -8%;
-  right: -8%;
-  bottom: 0;
-  height: 17%;
-  background:
-    repeating-linear-gradient(
-      165deg,
-      rgba(255, 255, 255, 0.24) 0 12px,
-      transparent 12px 28px
-    ),
-    linear-gradient(90deg, rgba(14, 165, 233, 0.5), rgba(6, 182, 212, 0.42));
-  border-top: 5px solid rgba(255, 255, 255, 0.32);
-  animation: rt-adventure-water 9s linear infinite;
-}
-
-.rt-adventure-skyline {
-  position: absolute;
-  left: 4%;
-  right: 4%;
-  top: 22%;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.4vw;
-}
-
-.rt-adventure-building {
-  width: clamp(38px, 10vw, 92px);
-  height: clamp(64px, 15vw, 145px);
-  border: 4px solid rgba(255, 255, 255, 0.8);
-  border-radius: 16px 16px 8px 8px;
-  background:
-    linear-gradient(135deg, transparent 0 50%, rgba(15, 23, 42, 0.12) 50%),
-    var(--rt-adventure-building);
-  box-shadow:
-    inset -12px 0 0 var(--rt-adventure-building-side),
-    0 12px 0 rgba(15, 23, 42, 0.12);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  padding: 12px;
-}
-
-.rt-adventure-building:nth-child(2),
-.rt-adventure-building:nth-child(5) {
-  height: clamp(78px, 19vw, 175px);
-}
-
-.rt-adventure-building:nth-child(3),
-.rt-adventure-building:nth-child(7) {
-  height: clamp(52px, 12vw, 115px);
-}
-
-.rt-adventure-building i {
-  border: 2px solid rgba(15, 23, 42, 0.12);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.76);
-  box-shadow: 0 0 14px var(--rt-adventure-glow);
-}
-
-.rt-adventure-road {
-  position: absolute;
-  border: 5px solid rgba(255, 255, 255, 0.72);
-  background: var(--rt-adventure-road);
-  box-shadow: 0 16px 0 rgba(15, 23, 42, 0.16);
-}
-
-.rt-adventure-road--main {
-  left: -14%;
-  right: -14%;
-  top: 57%;
-  height: 116px;
-  transform: rotate(-8deg);
-}
-
-.rt-adventure-road--cross {
-  left: 44%;
-  top: 35%;
-  width: 104px;
-  height: 72%;
-  transform: rotate(18deg);
-}
-
-.rt-adventure-road-line {
-  position: absolute;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--rt-adventure-road-line) 0 36px,
-    transparent 36px 64px
-  );
-  filter: drop-shadow(0 2px 0 rgba(15, 23, 42, 0.18));
-}
-
-.rt-adventure-road-line--main {
-  left: -8%;
-  right: -8%;
-  top: calc(57% + 53px);
-  height: 9px;
-  transform: rotate(-8deg);
-}
-
-.rt-adventure-road-line--cross {
-  left: calc(44% + 45px);
-  top: 38%;
-  width: 9px;
-  height: 61%;
-  background: repeating-linear-gradient(
-    180deg,
-    var(--rt-adventure-road-line) 0 34px,
-    transparent 34px 62px
-  );
-  transform: rotate(18deg);
-}
-
-.rt-adventure-trees,
-.rt-adventure-coins {
-  position: absolute;
-  inset: 0;
-}
-
-.rt-adventure-tree {
-  position: absolute;
-  width: 30px;
-  height: 48px;
-}
-
-.rt-adventure-tree::before {
-  content: "";
-  position: absolute;
-  left: 10px;
-  bottom: 0;
-  width: 10px;
-  height: 26px;
-  border-radius: 999px;
-  background: #92400e;
-}
-
-.rt-adventure-tree::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 17px;
-  width: 30px;
-  height: 30px;
-  border: 3px solid rgba(255, 255, 255, 0.7);
-  border-radius: 999px 999px 12px 999px;
-  background: var(--rt-adventure-tree);
-  box-shadow: 10px -6px 0 rgba(255, 255, 255, 0.16);
-}
-
-.rt-adventure-tree:nth-child(1) { left: 7%; top: 48%; }
-.rt-adventure-tree:nth-child(2) { left: 21%; top: 72%; }
-.rt-adventure-tree:nth-child(3) { left: 33%; top: 45%; }
-.rt-adventure-tree:nth-child(4) { left: 62%; top: 50%; }
-.rt-adventure-tree:nth-child(5) { left: 82%; top: 70%; }
-.rt-adventure-tree:nth-child(6) { left: 91%; top: 42%; }
-.rt-adventure-tree:nth-child(7) { left: 12%; top: 82%; }
-.rt-adventure-tree:nth-child(8) { left: 72%; top: 82%; }
-
-.rt-adventure-coin {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border: 3px solid #fff7ad;
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 35%, #fff7ad, var(--rt-adventure-coin) 62%);
-  box-shadow:
-    inset 0 -4px 0 rgba(180, 83, 9, 0.25),
-    0 0 20px var(--rt-adventure-glow);
-  animation: rt-adventure-coin 1.5s ease-in-out infinite;
-}
-
-.rt-adventure-coin::after {
-  content: "$";
-  position: absolute;
-  inset: 0;
-  color: #854d0e;
-  display: grid;
-  font-size: 13px;
-  font-weight: 900;
-  place-items: center;
-}
-
-.rt-adventure-coin:nth-child(1) { left: 15%; top: 55%; }
-.rt-adventure-coin:nth-child(2) { left: 27%; top: 51%; animation-delay: 0.2s; }
-.rt-adventure-coin:nth-child(3) { left: 41%; top: 58%; animation-delay: 0.4s; }
-.rt-adventure-coin:nth-child(4) { left: 55%; top: 49%; animation-delay: 0.6s; }
-.rt-adventure-coin:nth-child(5) { left: 69%; top: 56%; animation-delay: 0.8s; }
-.rt-adventure-coin:nth-child(6) { left: 79%; top: 62%; animation-delay: 1s; }
-.rt-adventure-coin:nth-child(7) { left: 24%; top: 75%; animation-delay: 1.2s; }
-.rt-adventure-coin:nth-child(8) { left: 48%; top: 78%; animation-delay: 1.4s; }
-.rt-adventure-coin:nth-child(9) { left: 74%; top: 76%; animation-delay: 1.6s; }
-
-.rt-adventure-bus {
-  position: absolute;
-  left: 14%;
-  top: calc(57% + 4px);
-  width: 118px;
-  height: 62px;
-  border: 5px solid #ffffff;
-  border-radius: 24px 24px 14px 14px;
-  background: linear-gradient(135deg, #f97316, #facc15);
-  box-shadow:
-    inset 0 -10px 0 rgba(180, 83, 9, 0.24),
-    0 18px 0 rgba(15, 23, 42, 0.16),
-    0 0 28px var(--rt-adventure-glow);
-  animation: rt-adventure-bus 5.2s ease-in-out infinite;
-}
-
-.rt-adventure-bus::before {
-  content: "";
-  position: absolute;
-  left: -13px;
-  top: 27px;
-  width: 12px;
-  height: 18px;
-  border-radius: 999px 0 0 999px;
-  background: #fde68a;
-}
-
-.rt-adventure-bus__window,
-.rt-adventure-bus__door {
-  position: absolute;
-  top: 11px;
-  width: 24px;
-  height: 20px;
-  border: 3px solid rgba(15, 23, 42, 0.18);
-  border-radius: 9px;
-  background: #dbeafe;
-}
-
-.rt-adventure-bus__window:nth-child(1) { left: 16px; }
-.rt-adventure-bus__window:nth-child(2) { left: 47px; }
-
-.rt-adventure-bus__door {
-  right: 14px;
-  height: 34px;
-}
-
-.rt-adventure-bus__wheel {
-  position: absolute;
-  bottom: -13px;
-  width: 24px;
-  height: 24px;
-  border: 5px solid #f8fafc;
-  border-radius: 999px;
-  background: #0f172a;
-  box-shadow: inset 0 0 0 4px #64748b;
-}
-
-.rt-adventure-bus__wheel--front { right: 18px; }
-.rt-adventure-bus__wheel--back { left: 18px; }
-
-.rt-adventure-hud {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: max(88px, calc(env(safe-area-inset-bottom) + 78px));
-  z-index: 2;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 22px;
-  background: rgba(15, 23, 42, 0.78);
-  color: #ffffff;
-  padding: 10px;
-  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.32);
-  backdrop-filter: blur(16px);
-}
-
-.rt-adventure-hud > div:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.rt-adventure-hud strong {
-  font-size: clamp(15px, 4vw, 18px);
-  font-weight: 950;
-}
-
-.rt-adventure-kicker {
-  color: #fde68a;
-  font-size: 10px;
-  font-weight: 950;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.rt-adventure-counters {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  margin-top: 9px;
-}
-
-.rt-adventure-counters span {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #e0f2fe;
-  font-size: 11px;
-  font-weight: 850;
-  padding: 7px 8px;
-}
-
-.rt-adventure-skins {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 5px;
-  margin-top: 8px;
-}
-
-.rt-adventure-skin {
-  min-height: 54px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 13px;
-  background: rgba(15, 23, 42, 0.34);
-  color: #cbd5e1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  justify-content: center;
-  padding: 6px;
-  text-align: center;
-}
-
-.rt-adventure-skin span {
-  font-size: 13px;
-  line-height: 1;
-}
-
-.rt-adventure-skin strong {
-  color: inherit;
-  font-size: 9.5px;
-  font-weight: 950;
-  line-height: 1.05;
-}
-
-.rt-adventure-skin small {
-  color: inherit;
-  font-size: 9px;
-  font-weight: 850;
-  opacity: 0.82;
-}
-
-.rt-adventure-skin--unlocked {
-  background: rgba(34, 197, 94, 0.18);
-  color: #dcfce7;
-}
-
-.rt-adventure-skin--locked {
-  filter: grayscale(0.4);
-  opacity: 0.7;
-}
-
-.rt-adventure-skin--active {
-  border-color: #facc15;
-  box-shadow:
-    inset 0 0 0 1px rgba(250, 204, 21, 0.36),
-    0 0 22px var(--rt-adventure-glow);
-}
-
-@keyframes rt-adventure-bus {
-  0%,
-  100% {
-    transform: translateX(0) translateY(0) rotate(-5deg);
-  }
-
-  45% {
-    transform: translateX(42vw) translateY(-8px) rotate(-5deg);
-  }
-
-  55% {
-    transform: translateX(42vw) translateY(-8px) rotate(-5deg) scaleX(-1);
-  }
-
-  95% {
-    transform: translateX(0) translateY(0) rotate(-5deg) scaleX(-1);
-  }
-}
-
-@keyframes rt-adventure-coin {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-
-  50% {
-    transform: translateY(-10px) scale(1.08);
-  }
-}
-
-@keyframes rt-adventure-water {
-  0% {
-    background-position: 0 0, 0 0;
-  }
-
-  100% {
-    background-position: 96px 0, 0 0;
-  }
-}
-
 @keyframes rt-bus-pulse {
   0% {
     opacity: 0.75;
@@ -821,6 +419,59 @@ button {
   100% {
     opacity: 0;
     transform: scale(1.55);
+  }
+}
+
+@keyframes rt-map-sparkle-drift {
+  0% {
+    background-position:
+      0 0,
+      0 0;
+  }
+
+  100% {
+    background-position:
+      120px 42px,
+      -90px 64px;
+  }
+}
+
+@keyframes rt-map-cloud-float {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(calc(100vw + 180px));
+  }
+}
+
+@keyframes rt-map-coin-bounce {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-10px) scale(1.08);
+  }
+}
+
+@keyframes rt-map-mini-bus-drive {
+  0% {
+    transform: translateX(0) rotate(-4deg);
+  }
+
+  48% {
+    transform: translateX(calc(100vw + 110px)) rotate(-4deg);
+  }
+
+  52% {
+    transform: translateX(calc(100vw + 110px)) rotate(-4deg) scaleX(-1);
+  }
+
+  100% {
+    transform: translateX(0) rotate(-4deg) scaleX(-1);
   }
 }
 
@@ -876,38 +527,21 @@ button {
     width: min(244px, calc(100vw - 24px));
   }
 
-  .rt-adventure-road--main {
-    height: 96px;
+  .rt-map-cloud {
+    transform: scale(0.72);
   }
 
-  .rt-adventure-road--cross {
-    width: 76px;
-  }
-
-  .rt-adventure-bus {
-    width: 96px;
-    height: 54px;
-  }
-
-  .rt-adventure-hud {
-    bottom: max(76px, calc(env(safe-area-inset-bottom) + 68px));
-    padding: 9px;
-  }
-
-  .rt-adventure-counters {
-    grid-template-columns: 1fr;
-  }
-
-  .rt-adventure-skins {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .rt-map-mini-bus {
+    bottom: 18%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .rt-bus-marker__pulse,
-  .rt-adventure-bus,
-  .rt-adventure-coin,
-  .rt-adventure-water {
+  .rt-map-shell--animated::before,
+  .rt-map-cloud,
+  .rt-map-coin,
+  .rt-map-mini-bus {
     animation: none;
   }
 }

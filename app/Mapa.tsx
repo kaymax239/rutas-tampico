@@ -1,6 +1,12 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   MapContainer,
   TileLayer,
@@ -43,7 +49,7 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
-type EstiloMapa = "navegacion" | "normal" | "nocturno" | "barrio";
+type EstiloMapa = "nocturno" | "barrio";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -81,16 +87,6 @@ const MAPAS_DISPONIBLES: Record<
   EstiloMapa,
   { label: string; url: string; attribution: string; premium?: boolean }
 > = {
-  navegacion: {
-    label: "Navegación",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-  },
-  normal: {
-    label: "Mapa normal",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-  },
   nocturno: {
     label: "Mapa nocturno",
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
@@ -918,7 +914,7 @@ export default function Mapa({
   const [procesandoViaje, setProcesandoViaje] = useState(false);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
-  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
+  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1007,11 +1003,16 @@ export default function Mapa({
   const kilometrosUsuario = obtenerNumero(usuarioKm.kmTotales);
   const nocturnoDesbloqueado = kilometrosUsuario >= 100;
   const estiloMapaAplicado =
-    estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "navegacion" : estiloMapa;
+    estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "barrio" : estiloMapa;
   const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
+  const esZonaNorteSeleccionada =
+    zonaSeleccionada === "Zona Norte / Altamira";
+  const clasePantallaRutas = esZonaNorteSeleccionada
+    ? "rt-route-list-screen rt-route-list-screen--north"
+    : "rt-route-list-screen rt-route-list-screen--tampico";
 
 
   const seleccionarTipoRuta = (tipo: TipoRuta) => {
@@ -1291,7 +1292,7 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Tampico / Madero")}
-          className="rt-cartoon-route-button rt-cartoon-route-button--zone"
+          className="rt-zone-button rt-zone-button--tampico"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1303,15 +1304,13 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          <span className="rt-cartoon-route-button__title rt-cartoon-route-button__title--center">
-            <span className="rt-cartoon-route-button__icon">📍</span>
-            <span>Tampico / Madero</span>
-          </span>
+          <span>📍 Tampico / Madero</span>
+          <span aria-hidden="true">🚌</span>
         </button>
 
         <button
           onClick={() => cambiarZona("Zona Norte / Altamira")}
-          className="rt-cartoon-route-button rt-cartoon-route-button--zone"
+          className="rt-zone-button rt-zone-button--north"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1323,10 +1322,8 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          <span className="rt-cartoon-route-button__title rt-cartoon-route-button__title--center">
-            <span className="rt-cartoon-route-button__icon">📍</span>
-            <span>Zona Norte</span>
-          </span>
+          <span>🌴 Zona Norte</span>
+          <span aria-hidden="true">🚙</span>
         </button>
 
         <button
@@ -1351,71 +1348,71 @@ export default function Mapa({
 
   if (pantallaFlujo === "rutas") {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0f172a",
-          padding: 24,
-          color: "white",
-        }}
-      >
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-          {obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
-        </h1>
+      <div className={clasePantallaRutas}>
+        <div className="rt-route-list-hero">
+          <span className="rt-route-list-hero__eyebrow">
+            {esZonaNorteSeleccionada
+              ? "Rutas Tampico MAFA"
+              : obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
+          </span>
+          <h1>{obtenerEtiquetaZona(zonaSeleccionada)}</h1>
+          <p>
+            {esZonaNorteSeleccionada
+              ? "Selecciona tu ruta"
+              : "Elige tu ruta con estilo cartoon."}
+          </p>
+        </div>
 
-        <p style={{ color: "#cbd5e1", marginBottom: 20 }}>
-          Zona: {obtenerEtiquetaZona(zonaSeleccionada)}
-        </p>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="rt-route-list-grid">
           {rutasDeZona.length === 0 && (
-            <div
-              style={{
-                border: "1px solid rgba(148,163,184,.35)",
-                borderRadius: 18,
-                color: "#cbd5e1",
-                padding: 18,
-              }}
-            >
+            <div className="rt-route-empty">
               No hay rutas en esta selección.
             </div>
           )}
 
-          {rutasDeZona.map((ruta) => {
+          {rutasDeZona.map((ruta, index) => {
             const usuariosRuta = conteoUsuariosPorRuta[ruta.nombre] || 0;
 
             return (
               <button
                 key={ruta.nombre}
                 onClick={() => seleccionarRuta(ruta.nombre)}
-                className="rt-cartoon-route-button"
-                style={{
-                  padding: 18,
-                  borderRadius: 18,
-                  border: "none",
-                  background: ruta.color,
-                  color: "white",
-                  fontSize: 18,
-                  fontWeight: 800,
-                  textAlign: "left",
-                  cursor: "pointer",
-                }}
+                className={
+                  esZonaNorteSeleccionada
+                    ? "rt-route-card rt-route-card--north"
+                    : "rt-route-card rt-route-card--tampico"
+                }
+                style={{ "--route-color": ruta.color } as CSSProperties}
               >
-                <span className="rt-cartoon-route-button__title">
-                  <span className="rt-cartoon-route-button__icon">🚍</span>
-                  <span>{ruta.nombre}</span>
+                <span className="rt-route-card__badge">
+                  {esZonaNorteSeleccionada
+                    ? `Ruta ${101 + index}`
+                    : String(index + 1).padStart(2, "0")}
                 </span>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    marginTop: 6,
-                    opacity: 0.9,
-                  }}
-                >
-                  👥 {usuariosRuta} usuarios en esta ruta
+                <span className="rt-route-card__content">
+                  <span className="rt-route-card__name">{ruta.nombre}</span>
+                  <span className="rt-route-card__meta">
+                    <span>{usuariosRuta} usuarios en esta ruta</span>
+                  </span>
                 </span>
+                {esZonaNorteSeleccionada ? (
+                  <span className="rt-route-card__scene" aria-hidden="true">
+                    <span className="rt-route-card__palm">🌴</span>
+                    <span className="rt-route-card__bus">🚙</span>
+                  </span>
+                ) : (
+                  <>
+                    <span className="rt-route-card__scene" aria-hidden="true">
+                      <span className="rt-route-card__sun">☀️</span>
+                      <span className="rt-route-card__bus">🚌</span>
+                    </span>
+                    <span className="rt-route-card__lights" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </>
+                )}
               </button>
             );
           })}
@@ -1423,17 +1420,7 @@ export default function Mapa({
 
         <button
           onClick={regresarAZonas}
-          style={{
-            marginTop: 20,
-            padding: 14,
-            borderRadius: 999,
-            border: "none",
-            background: "white",
-            color: "#111827",
-            fontWeight: 800,
-            width: "100%",
-            cursor: "pointer",
-          }}
+          className="rt-route-back"
         >
           ← Regresar
         </button>
@@ -1442,7 +1429,7 @@ export default function Mapa({
   }
 
   return (
-    <div className="rt-map-shell rt-map-shell--animated">
+    <div className="rt-map-shell">
       <div className="rt-map-panel">
         <div className="rt-map-panel__main">
           <div
@@ -1576,14 +1563,6 @@ export default function Mapa({
         </button>
       </div>
 
-      <div className="rt-map-animation-layer" aria-hidden="true">
-        <span className="rt-map-cloud rt-map-cloud--one" />
-        <span className="rt-map-cloud rt-map-cloud--two" />
-        <span className="rt-map-coin rt-map-coin--one" />
-        <span className="rt-map-coin rt-map-coin--two" />
-        <span className="rt-map-mini-bus" />
-      </div>
-
       <MapContainer
         center={[22.2553, -97.8686]}
         zoom={13}
@@ -1611,7 +1590,6 @@ export default function Mapa({
                   opacity: estiloMapaAplicado === "nocturno" ? 0.8 : 0.92,
                   lineCap: "round",
                   lineJoin: "round",
-                  className: "rt-cartoon-route-outline",
                 }}
               />
               <Polyline
@@ -1622,7 +1600,6 @@ export default function Mapa({
                   opacity: 1,
                   lineCap: "round",
                   lineJoin: "round",
-                  className: "rt-cartoon-route-line",
                 }}
               />
             </Fragment>

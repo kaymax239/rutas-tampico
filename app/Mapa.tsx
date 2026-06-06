@@ -27,7 +27,9 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import AnimatedNavigationMap from "./AnimatedNavigationMap";
-import RecomendacionesMapaAnimado from "./RecomendacionesMapaAnimado";
+import RecomendacionesMapaAnimado, {
+  type DiagnosticoRecomendaciones,
+} from "./RecomendacionesMapaAnimado";
 import { db } from "./firebase";
 
 type Bus = {
@@ -923,6 +925,14 @@ export default function Mapa({
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
   const [mostrarRecomendaciones, setMostrarRecomendaciones] = useState(true);
+  const [modoPruebaRecomendaciones, setModoPruebaRecomendaciones] =
+    useState(false);
+  const [diagnosticoRecomendaciones, setDiagnosticoRecomendaciones] =
+    useState<DiagnosticoRecomendaciones>({
+      total: 0,
+      activas: false,
+      distanciaMasCercanaMetros: null,
+    });
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1580,20 +1590,56 @@ export default function Mapa({
         </button>
 
         {recomendacionesDisponibles && (
-          <button
-            type="button"
-            onClick={() => setMostrarRecomendaciones((prev) => !prev)}
-            className={
-              mostrarRecomendaciones
-                ? "rt-fab rt-fab--recommendations rt-fab--recommendations-active"
-                : "rt-fab rt-fab--recommendations"
-            }
-            aria-label="Activar o desactivar recomendaciones"
-          >
-            <span>Recs</span>
-          </button>
+          <div className="rt-recommendation-controls">
+            <button
+              type="button"
+              onClick={() => setMostrarRecomendaciones((prev) => !prev)}
+              className={
+                mostrarRecomendaciones
+                  ? "rt-fab rt-fab--recommendations rt-fab--recommendations-active"
+                  : "rt-fab rt-fab--recommendations"
+              }
+              aria-label="Activar o desactivar recomendaciones"
+            >
+              <span>Recs</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarRecomendaciones(true);
+                setModoPruebaRecomendaciones((prev) => !prev);
+              }}
+              className={
+                modoPruebaRecomendaciones
+                  ? "rt-recommendation-test-button rt-recommendation-test-button--active"
+                  : "rt-recommendation-test-button"
+              }
+            >
+              Probar Recs
+            </button>
+          </div>
         )}
       </div>
+
+      {recomendacionesDisponibles && (
+        <div className="rt-recommendation-diagnostics">
+          <span>
+            Recomendaciones cargadas: {diagnosticoRecomendaciones.total}
+          </span>
+          <span>
+            Recs activas: {diagnosticoRecomendaciones.activas ? "sí" : "no"}
+          </span>
+          <span>
+            Distancia al negocio más cercano:{" "}
+            {diagnosticoRecomendaciones.distanciaMasCercanaMetros === null
+              ? "-- m"
+              : `${Math.round(
+                  diagnosticoRecomendaciones.distanciaMasCercanaMetros
+                )} m`}
+          </span>
+        </div>
+      )}
 
       <MapContainer
         center={[22.2553, -97.8686]}
@@ -1620,6 +1666,8 @@ export default function Mapa({
           rutaSeleccionada={rutaSeleccionada}
           userPosition={ubicacion}
           buses={busesFiltrados}
+          testMode={modoPruebaRecomendaciones}
+          onDiagnosticChange={setDiagnosticoRecomendaciones}
         />
 
         {rutasDeZona

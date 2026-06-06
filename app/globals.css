@@ -1068,6 +1068,53 @@ button {
     0 0 26px rgba(236, 72, 153, 0.52);
 }
 
+.rt-recommendation-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.rt-recommendation-test-button {
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #fde68a;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 1000;
+  padding: 7px 10px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.28);
+}
+
+.rt-recommendation-test-button--active {
+  background: linear-gradient(135deg, #f97316, #ec4899);
+  color: #ffffff;
+  box-shadow:
+    0 0 0 4px rgba(249, 115, 22, 0.18),
+    0 12px 26px rgba(15, 23, 42, 0.34);
+}
+
+.rt-recommendation-diagnostics {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 99998;
+  width: min(280px, calc(100vw - 128px));
+  border: 1px solid rgba(125, 211, 252, 0.35);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.82);
+  color: #e0f2fe;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 850;
+  padding: 9px 10px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.28);
+}
+
 .rt-fab:disabled {
   cursor: not-allowed;
   opacity: 0.6;

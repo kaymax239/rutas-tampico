@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Marker } from "react-leaflet";
 import L from "leaflet";
 import {
@@ -16,11 +16,19 @@ type PuntoCercano = {
   lng: number;
 };
 
+export type DiagnosticoRecomendaciones = {
+  total: number;
+  activas: boolean;
+  distanciaMasCercanaMetros: number | null;
+};
+
 type RecomendacionesMapaAnimadoProps = {
   active: boolean;
   rutaSeleccionada: string;
   userPosition: Position | null;
   buses: PuntoCercano[];
+  testMode?: boolean;
+  onDiagnosticChange?: (diagnostico: DiagnosticoRecomendaciones) => void;
 };
 
 const RADIO_RECOMENDACION_METROS = 100;
@@ -70,7 +78,9 @@ function crearPopupRecomendacionIcon(
   recomendacion: RecomendacionCircuitoNorte,
   distanciaMetros: number
 ) {
-  const distancia = Math.max(1, Math.round(distanciaMetros));
+  const distancia = Number.isFinite(distanciaMetros)
+    ? `A ${Math.max(1, Math.round(distanciaMetros))} m`
+    : "Modo prueba";
 
   return new L.DivIcon({
     html: `
@@ -78,7 +88,7 @@ function crearPopupRecomendacionIcon(
         <strong>${obtenerEmojiTipo(recomendacion.tipo)} ${recomendacion.nombre}</strong>
         <span>${recomendacion.precio} barato</span>
         <span>${recomendacion.calidad} rico</span>
-        <small>A ${distancia} m</small>
+        <small>${distancia}</small>
       </div>
     `,
     className: "",
@@ -92,6 +102,8 @@ export default function RecomendacionesMapaAnimado({
   rutaSeleccionada,
   userPosition,
   buses,
+  testMode = false,
+  onDiagnosticChange,
 }: RecomendacionesMapaAnimadoProps) {
   const esCircuitoNorte = rutaSeleccionada
     .toLowerCase()
@@ -107,10 +119,8 @@ export default function RecomendacionesMapaAnimado({
     return puntos;
   }, [buses, userPosition]);
 
-  const recomendacionesCercanas = useMemo(() => {
-    if (!active || !esCircuitoNorte || puntosReferencia.length === 0) {
-      return [];
-    }
+  const recomendacionesConDistancia = useMemo(() => {
+    if (!active || !esCircuitoNorte) return [];
 
     return recomendacionesCircuitoNorte
       .map((recomendacion) => {
@@ -118,25 +128,42 @@ export default function RecomendacionesMapaAnimado({
           recomendacion.lat,
           recomendacion.lng,
         ];
-        const distanciaMinima = Math.min(
-          ...puntosReferencia.map((punto) =>
-            distanciaHaversineMetros(punto, posicionRecomendacion)
-          )
-        );
+        const distanciaMinima =
+          puntosReferencia.length > 0
+            ? Math.min(
+                ...puntosReferencia.map((punto) =>
+                  distanciaHaversineMetros(punto, posicionRecomendacion)
+                )
+              )
+            : Number.POSITIVE_INFINITY;
 
         return {
           recomendacion,
           distanciaMetros: distanciaMinima,
         };
       })
-      .filter(
-        (item) => item.distanciaMetros <= RADIO_RECOMENDACION_METROS
-      )
-      .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
-      .slice(0, MAX_POPUPS_VISIBLES);
+      .sort((a, b) => a.distanciaMetros - b.distanciaMetros);
   }, [active, esCircuitoNorte, puntosReferencia]);
 
+  const distanciaMasCercanaMetros =
+    recomendacionesConDistancia[0]?.distanciaMetros ?? null;
+  const recomendacionesCercanas = testMode
+    ? recomendacionesConDistancia.slice(0, recomendacionesCircuitoNorte.length)
+    : recomendacionesConDistancia
+        .filter(
+          (item) => item.distanciaMetros <= RADIO_RECOMENDACION_METROS
+        )
+        .slice(0, MAX_POPUPS_VISIBLES);
 
+  useEffect(() => {
+    onDiagnosticChange?.({
+      total: recomendacionesCircuitoNorte.length,
+      activas: active,
+      distanciaMasCercanaMetros: Number.isFinite(distanciaMasCercanaMetros ?? NaN)
+        ? distanciaMasCercanaMetros
+        : null,
+    });
+  }, [active, distanciaMasCercanaMetros, onDiagnosticChange]);
 
   if (!active || !esCircuitoNorte) return null;
 

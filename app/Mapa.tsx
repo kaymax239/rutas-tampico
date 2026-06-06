@@ -4,6 +4,7 @@ import {
   Fragment,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
@@ -24,6 +25,7 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  setDoc,
   type Timestamp,
 } from "firebase/firestore";
 import AnimatedNavigationMap from "./AnimatedNavigationMap";
@@ -920,6 +922,7 @@ export default function Mapa({
   );
   const [usuarioKm, setUsuarioKm] = useState<UsuarioKm>(USUARIO_KM_INICIAL);
   const [procesandoViaje, setProcesandoViaje] = useState(false);
+  const seguimientoUbicacionRef = useRef<number | null>(null);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
@@ -984,6 +987,14 @@ export default function Mapa({
 
     return () => unsub();
   }, [userId]);
+
+  useEffect(() => {
+    return () => {
+      if (seguimientoUbicacionRef.current !== null) {
+        navigator.geolocation.clearWatch(seguimientoUbicacionRef.current);
+      }
+    };
+  }, []);
 
   const rutasDeZona = useMemo(() => {
     return rutas.filter((ruta) => {
@@ -1063,20 +1074,63 @@ export default function Mapa({
     setPantallaFlujo("zonas");
   };
 
-  const obtenerMiUbicacion = () => {
-    if (!navigator.geolocation) {
-      alert("Tu navegador no permite ubicación.");
-      return;
-    }
+  const registrarUbicacionChofer = (
+    id: string,
+    ruta: string,
+    lat: number,
+    lng: number
+  ) => {
+    void setDoc(
+      doc(db, "autobuses", id),
+      {
+        nombre: ruta,
+        ruta,
+        lat,
+        lng,
+        fecha: serverTimestamp(),
+      },
+      { merge: true }
+    ).catch(() => {
+      console.error("No se pudo actualizar la ubicación del chofer.");
+    });
+  };
 
-    navigator.geolocation.getCurrentPosition(
+  const detenerSeguimientoUbicacion = () => {
+    if (seguimientoUbicacionRef.current === null) return;
+
+    navigator.geolocation.clearWatch(seguimientoUbicacionRef.current);
+    seguimientoUbicacionRef.current = null;
+  };
+
+  const iniciarSeguimientoUbicacion = (id: string, ruta: string) => {
+    if (!navigator.geolocation) return;
+
+    detenerSeguimientoUbicacion();
+    seguimientoUbicacionRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        setUbicacion([lat, lng]);
+
+        if (modoUsuario === "chofer") {
+          registrarUbicacionChofer(id, ruta, lat, lng);
+        }
       },
       () => {
-        alert("No se pudo obtener tu ubicación.");
-      }
+        console.error("No se pudo seguir la ubicación en tiempo real.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
     );
+  };
+
+  const obtenerMiUbicacion = async () => {
+    try {
+      const pos = await obtenerPosicionActual();
+      setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+    } catch {
+      alert("No se pudo obtener tu ubicación.");
+    }
   };
 
   const iniciarViaje = async () => {
@@ -1095,20 +1149,30 @@ export default function Mapa({
       return;
     }
 
+    const id = userId || obtenerOCrearUserId();
+    setUserId(id);
     setProcesandoViaje(true);
 
     try {
       const pos = await obtenerPosicionActual();
+      const latInicio = pos.coords.latitude;
+      const lngInicio = pos.coords.longitude;
       const viaje: ViajeActivo = {
         ruta: rutaSeleccionada,
         horaInicio: new Date().toISOString(),
-        latInicio: pos.coords.latitude,
-        lngInicio: pos.coords.longitude,
+        latInicio,
+        lngInicio,
       };
 
       guardarViajeActivo(viaje);
       setViajeActivo(viaje);
-      setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+      setUbicacion([latInicio, lngInicio]);
+
+      if (modoUsuario === "chofer") {
+        registrarUbicacionChofer(id, rutaSeleccionada, latInicio, lngInicio);
+      }
+
+      iniciarSeguimientoUbicacion(id, rutaSeleccionada);
       alert("Viaje iniciado");
     } catch {
       alert("No se pudo obtener tu ubicación. Activa el GPS y permite ubicación.");
@@ -1181,6 +1245,7 @@ export default function Mapa({
       });
 
       limpiarViajeActivo();
+      detenerSeguimientoUbicacion();
       setViajeActivo(null);
       setUbicacion([latFin, lngFin]);
       alert(`Viaje finalizado. Sumaste ${kmCalculados.toFixed(2)} km.`);

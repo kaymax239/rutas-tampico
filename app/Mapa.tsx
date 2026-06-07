@@ -49,7 +49,6 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
-type EstiloMapa = "nocturno" | "barrio";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -83,21 +82,9 @@ const USUARIO_KM_INICIAL: UsuarioKm = {
   nivel: "Nuevo pasajero",
   ultimoViaje: null,
 };
-const MAPAS_DISPONIBLES: Record<
-  EstiloMapa,
-  { label: string; url: string; attribution: string; premium?: boolean }
-> = {
-  nocturno: {
-    label: "Mapa nocturno",
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-    premium: true,
-  },
-  barrio: {
-    label: "Mapa barrio",
-    url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors, Tiles style by HOT",
-  },
+const MAPA_PROFESIONAL = {
+  url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  attribution: "&copy; OpenStreetMap &copy; CARTO",
 };
 
 function crearUserId() {
@@ -866,7 +853,15 @@ function BusAnimado({ bus }: { bus: Bus }) {
   );
 }
 
-function AjustarMapa({ ubicacion }: { ubicacion: [number, number] | null }) {
+function ControlarVistaMapa({
+  ubicacion,
+  ruta,
+  centrarRutaSolicitud,
+}: {
+  ubicacion: [number, number] | null;
+  ruta?: Ruta;
+  centrarRutaSolicitud: number;
+}) {
   const map = useMap();
 
   useEffect(() => {
@@ -874,6 +869,18 @@ function AjustarMapa({ ubicacion }: { ubicacion: [number, number] | null }) {
       map.flyTo(ubicacion, 15, { duration: 1 });
     }
   }, [ubicacion, map]);
+
+  useEffect(() => {
+    if (!ruta || ruta.puntos.length === 0 || centrarRutaSolicitud === 0) return;
+
+    const bounds = L.latLngBounds(ruta.puntos);
+    map.fitBounds(bounds, {
+      animate: true,
+      duration: 0.9,
+      padding: [44, 44],
+      maxZoom: 15,
+    });
+  }, [centrarRutaSolicitud, map, ruta]);
 
   return null;
 }
@@ -899,8 +906,7 @@ export default function Mapa({
   const [usuarioKm, setUsuarioKm] = useState<UsuarioKm>(USUARIO_KM_INICIAL);
   const [procesandoViaje, setProcesandoViaje] = useState(false);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
-  const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
-  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
+  const [centrarRutaSolicitud, setCentrarRutaSolicitud] = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -992,9 +998,7 @@ export default function Mapa({
   const usuariosRutaSeleccionada = rutaSeleccionada
     ? conteoUsuariosPorRuta[rutaSeleccionada] || 0
     : 0;
-  const mapaActual = MAPAS_DISPONIBLES[estiloMapa];
   const kilometrosUsuario = obtenerNumero(usuarioKm.kmTotales);
-  const nocturnoDesbloqueado = kilometrosUsuario >= 100;
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
@@ -1003,12 +1007,6 @@ export default function Mapa({
   const clasePantallaRutas = esZonaNorteSeleccionada
     ? "rt-route-list-screen rt-route-list-screen--north"
     : "rt-route-list-screen rt-route-list-screen--tampico";
-
-  useEffect(() => {
-    if (estiloMapa === "nocturno" && !nocturnoDesbloqueado) {
-      setEstiloMapa("barrio");
-    }
-  }, [estiloMapa, nocturnoDesbloqueado]);
 
   const seleccionarTipoRuta = (tipo: TipoRuta) => {
     setTipoRutaSeleccionado(tipo);
@@ -1063,6 +1061,12 @@ export default function Mapa({
         alert("No se pudo obtener tu ubicación.");
       }
     );
+  };
+
+  const centrarRutaEnMapa = () => {
+    if (!rutaMapaSeleccionada) return;
+
+    setCentrarRutaSolicitud((valor) => valor + 1);
   };
 
   const iniciarViaje = async () => {
@@ -1492,43 +1496,6 @@ export default function Mapa({
       </div>
 
       <div className="rt-floating-controls">
-        {mostrarOpcionesMapa && (
-          <div className="rt-map-style-menu">
-            <div className="rt-map-style-menu__title">Estilo de mapa</div>
-            {(Object.keys(MAPAS_DISPONIBLES) as EstiloMapa[]).map((mapa) => {
-              const opcion = MAPAS_DISPONIBLES[mapa];
-              const bloqueado = Boolean(opcion.premium && !nocturnoDesbloqueado);
-
-              return (
-                <button
-                  key={mapa}
-                  type="button"
-                  disabled={bloqueado}
-                  onClick={() => {
-                    if (bloqueado) return;
-                    setEstiloMapa(mapa);
-                    setMostrarOpcionesMapa(false);
-                  }}
-                  className={
-                    estiloMapa === mapa
-                      ? "rt-map-style-option rt-map-style-option--active"
-                      : "rt-map-style-option"
-                  }
-                >
-                  <span>{opcion.label}</span>
-                  {bloqueado && <small>Bloqueado · 100 km</small>}
-                </button>
-              );
-            })}
-            {!nocturnoDesbloqueado && (
-              <p>
-                Nocturno se desbloquea al llegar a 100 km. Km actuales:{" "}
-                {kilometrosUsuario.toFixed(2)}
-              </p>
-            )}
-          </div>
-        )}
-
         <button
           type="button"
           onClick={onRegresarInicio}
@@ -1541,20 +1508,26 @@ export default function Mapa({
 
         <button
           type="button"
-          onClick={() => setMostrarOpcionesMapa((prev) => !prev)}
+          onClick={centrarRutaEnMapa}
+          disabled={!rutaMapaSeleccionada}
           className="rt-fab rt-fab--dark"
-          aria-label="Cambiar mapa"
+          aria-label="Centrar ruta"
         >
-          <span>Mapa</span>
+          <span>Centrar ruta</span>
         </button>
 
         <button
           type="button"
           onClick={obtenerMiUbicacion}
-          className="rt-fab rt-fab--primary"
+          className={
+            ubicacion
+              ? "rt-fab rt-fab--primary rt-fab--active"
+              : "rt-fab rt-fab--primary"
+          }
           aria-label="Ir a mi ubicación"
         >
-          <span>GPS</span>
+          <span>Mi ubicación</span>
+          {ubicacion && <small>GPS activo</small>}
         </button>
       </div>
 
@@ -1565,12 +1538,15 @@ export default function Mapa({
         zoomControl={false}
         style={{ width: "100%", height: "100%" }}
       >
-        <AjustarMapa ubicacion={ubicacion} />
+        <ControlarVistaMapa
+          ubicacion={ubicacion}
+          ruta={rutaMapaSeleccionada}
+          centrarRutaSolicitud={centrarRutaSolicitud}
+        />
 
         <TileLayer
-          key={estiloMapa}
-          attribution={mapaActual.attribution}
-          url={mapaActual.url}
+          attribution={MAPA_PROFESIONAL.attribution}
+          url={MAPA_PROFESIONAL.url}
         />
 
         {rutasDeZona
@@ -1580,9 +1556,19 @@ export default function Mapa({
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: estiloMapa === "nocturno" ? "#020617" : "#ffffff",
-                  weight: 13,
-                  opacity: estiloMapa === "nocturno" ? 0.8 : 0.92,
+                  color: ruta.color,
+                  weight: 18,
+                  opacity: 0.2,
+                  lineCap: "round",
+                  lineJoin: "round",
+                }}
+              />
+              <Polyline
+                positions={ruta.puntos}
+                pathOptions={{
+                  color: "#ffffff",
+                  weight: 12,
+                  opacity: 0.94,
                   lineCap: "round",
                   lineJoin: "round",
                 }}
@@ -1591,8 +1577,8 @@ export default function Mapa({
                 positions={ruta.puntos}
                 pathOptions={{
                   color: ruta.color,
-                  weight: 7,
-                  opacity: 1,
+                  weight: 8,
+                  opacity: 0.98,
                   lineCap: "round",
                   lineJoin: "round",
                 }}

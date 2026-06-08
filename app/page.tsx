@@ -13,6 +13,8 @@ const Mapa = dynamic(() => import("./Mapa"), {
 const TAM_PROMO_STORAGE_KEY = "rutasKaymax.tampicoAlMinutoPromoClosedAt";
 const TAM_PROMO_HIDE_MS = 24 * 60 * 60 * 1000;
 const TAM_FACEBOOK_URL = "https://www.facebook.com/TampicoAlMinuto";
+const MAX_PROMO_STORAGE_KEY = "rutasKaymax.maxCleanersPromoClosedAt";
+const MAX_CLEANERS_PHONE = "8331063633";
 
 export default function Home() {
   const [modo, setModo] = useState<"inicio" | "chofer" | "pasajero">("inicio");
@@ -23,16 +25,23 @@ export default function Home() {
   const [comentarioSugerido, setComentarioSugerido] = useState("");
   const [enviandoSugerencia, setEnviandoSugerencia] = useState(false);
   const [mostrarPromoTam, setMostrarPromoTam] = useState(false);
+  const [mostrarPromoMax, setMostrarPromoMax] = useState(false);
   const usuariosEnLinea = useOnlineUsers();
 
   useUserPresence(modo === "inicio" ? null : rutaActiva);
 
   useEffect(() => {
-    const cerradoEn = Number(localStorage.getItem(TAM_PROMO_STORAGE_KEY));
-    const ocultarPromo =
-      Number.isFinite(cerradoEn) && Date.now() - cerradoEn < TAM_PROMO_HIDE_MS;
+    const cerradoTamEn = Number(localStorage.getItem(TAM_PROMO_STORAGE_KEY));
+    const cerradoMaxEn = Number(localStorage.getItem(MAX_PROMO_STORAGE_KEY));
+    const ocultarPromoTam =
+      Number.isFinite(cerradoTamEn) &&
+      Date.now() - cerradoTamEn < TAM_PROMO_HIDE_MS;
+    const ocultarPromoMax =
+      Number.isFinite(cerradoMaxEn) &&
+      Date.now() - cerradoMaxEn < TAM_PROMO_HIDE_MS;
 
-    setMostrarPromoTam(!ocultarPromo);
+    setMostrarPromoTam(!ocultarPromoTam);
+    setMostrarPromoMax(!ocultarPromoMax);
   }, []);
 
   const cambiarRutaActiva = useCallback((ruta: string | null) => {
@@ -83,6 +92,21 @@ export default function Home() {
 
   const seguirTampicoAlMinuto = () => {
     window.open(TAM_FACEBOOK_URL, "_blank", "noopener,noreferrer");
+  };
+
+  const cerrarPromoMax = () => {
+    localStorage.setItem(MAX_PROMO_STORAGE_KEY, String(Date.now()));
+    setMostrarPromoMax(false);
+  };
+
+  const llamarMaxCleaners = () => {
+    window.location.href = `tel:${MAX_CLEANERS_PHONE}`;
+  };
+
+  const mostrarInfoMaxCleaners = () => {
+    alert(
+      "MAX CLEANERS\nLavandería y Planchaduría\nTel. 833-106-36-33"
+    );
   };
 
   const enviarSugerencia = async () => {
@@ -348,7 +372,7 @@ export default function Home() {
             style={{
               position: "fixed",
               right: 18,
-              bottom: 18,
+              bottom: mostrarPromoMax ? 354 : 18,
               zIndex: 50,
               width: "min(320px, calc(100vw - 32px))",
               overflow: "hidden",
@@ -480,6 +504,156 @@ export default function Home() {
                   }}
                 >
                   Ahora no
+                </button>
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {mostrarPromoMax && (
+          <aside
+            aria-label="Promoción MAX CLEANERS"
+            style={{
+              position: "fixed",
+              right: 18,
+              bottom: 18,
+              zIndex: 51,
+              width: "min(320px, calc(100vw - 32px))",
+              overflow: "hidden",
+              border: "1px solid rgba(37,99,235,.18)",
+              borderRadius: 22,
+              background: "white",
+              color: "#0f172a",
+              boxShadow:
+                "0 22px 55px rgba(2,6,23,.32), 0 0 0 1px rgba(255,255,255,.75)",
+            }}
+          >
+            <div
+              style={{
+                minHeight: 72,
+                background:
+                  "linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #38bdf8 100%)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "14px 16px",
+                position: "relative",
+                color: "white",
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,.96)",
+                  color: "#1d4ed8",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 10,
+                  fontWeight: 950,
+                  lineHeight: 1,
+                  textAlign: "center",
+                  letterSpacing: "-.04em",
+                  boxShadow: "0 12px 24px rgba(15,23,42,.22)",
+                }}
+              >
+                MAX
+                <br />
+                CLEANERS
+              </div>
+
+              <div style={{ minWidth: 0, paddingRight: 26 }}>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: 18,
+                    fontWeight: 950,
+                    letterSpacing: "-.03em",
+                  }}
+                >
+                  🧺 MAX CLEANERS
+                </strong>
+                <span style={{ color: "#dbeafe", fontSize: 12, fontWeight: 850 }}>
+                  Lavandería y Planchaduría
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={cerrarPromoMax}
+                aria-label="Cerrar promoción MAX CLEANERS"
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  width: 28,
+                  height: 28,
+                  border: "none",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,.9)",
+                  color: "#1e3a8a",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  fontWeight: 900,
+                  lineHeight: "28px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 16 }}>
+              <p
+                style={{
+                  color: "#334155",
+                  fontSize: 14,
+                  fontWeight: 750,
+                  lineHeight: 1.4,
+                  margin: "0 0 14px",
+                }}
+              >
+                Servicio profesional de lavado, secado y planchado. Atención
+                rápida, excelente calidad y precios accesibles.
+              </p>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={llamarMaxCleaners}
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    borderRadius: 14,
+                    background: "#2563eb",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 900,
+                    padding: "11px 12px",
+                    boxShadow: "0 12px 24px rgba(37,99,235,.22)",
+                  }}
+                >
+                  📞 Llamar ahora
+                </button>
+
+                <button
+                  type="button"
+                  onClick={mostrarInfoMaxCleaners}
+                  style={{
+                    flex: 1,
+                    border: "1px solid #dbeafe",
+                    borderRadius: 14,
+                    background: "#eff6ff",
+                    color: "#1d4ed8",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 900,
+                    padding: "11px 12px",
+                  }}
+                >
+                  Más información
                 </button>
               </div>
             </div>

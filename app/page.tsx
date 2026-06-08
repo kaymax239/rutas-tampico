@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebase";
@@ -10,6 +10,10 @@ const Mapa = dynamic(() => import("./Mapa"), {
   ssr: false,
 });
 
+const TAM_PROMO_STORAGE_KEY = "rutasKaymax.tampicoAlMinutoPromoClosedAt";
+const TAM_PROMO_HIDE_MS = 24 * 60 * 60 * 1000;
+const TAM_FACEBOOK_URL = "https://www.facebook.com/TampicoAlMinuto";
+
 export default function Home() {
   const [modo, setModo] = useState<"inicio" | "chofer" | "pasajero">("inicio");
   const [rutaActiva, setRutaActiva] = useState<string | null>(null);
@@ -18,9 +22,18 @@ export default function Home() {
   const [zonaSugerida, setZonaSugerida] = useState("");
   const [comentarioSugerido, setComentarioSugerido] = useState("");
   const [enviandoSugerencia, setEnviandoSugerencia] = useState(false);
+  const [mostrarPromoTam, setMostrarPromoTam] = useState(false);
   const usuariosEnLinea = useOnlineUsers();
 
   useUserPresence(modo === "inicio" ? null : rutaActiva);
+
+  useEffect(() => {
+    const cerradoEn = Number(localStorage.getItem(TAM_PROMO_STORAGE_KEY));
+    const ocultarPromo =
+      Number.isFinite(cerradoEn) && Date.now() - cerradoEn < TAM_PROMO_HIDE_MS;
+
+    setMostrarPromoTam(!ocultarPromo);
+  }, []);
 
   const cambiarRutaActiva = useCallback((ruta: string | null) => {
     setRutaActiva(ruta);
@@ -61,6 +74,15 @@ export default function Home() {
 
   const llamarEmergencias = () => {
     window.location.href = "tel:911";
+  };
+
+  const cerrarPromoTam = () => {
+    localStorage.setItem(TAM_PROMO_STORAGE_KEY, String(Date.now()));
+    setMostrarPromoTam(false);
+  };
+
+  const seguirTampicoAlMinuto = () => {
+    window.open(TAM_FACEBOOK_URL, "_blank", "noopener,noreferrer");
   };
 
   const enviarSugerencia = async () => {
@@ -319,6 +341,150 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {mostrarPromoTam && (
+          <aside
+            aria-label="Promoción Tampico al Minuto"
+            style={{
+              position: "fixed",
+              right: 18,
+              bottom: 18,
+              zIndex: 50,
+              width: "min(320px, calc(100vw - 32px))",
+              overflow: "hidden",
+              border: "1px solid rgba(14,165,233,.18)",
+              borderRadius: 22,
+              background: "white",
+              color: "#0f172a",
+              boxShadow:
+                "0 22px 55px rgba(2,6,23,.32), 0 0 0 1px rgba(255,255,255,.75)",
+            }}
+          >
+            <div
+              style={{
+                minHeight: 66,
+                background:
+                  "linear-gradient(135deg, #dbeafe 0%, #bae6fd 48%, #e0f2fe 100%)",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "14px 16px",
+                position: "relative",
+              }}
+            >
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 14,
+                  background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+                  color: "white",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  letterSpacing: "-.04em",
+                  boxShadow: "0 10px 24px rgba(37,99,235,.25)",
+                }}
+              >
+                TaM
+              </div>
+
+              <div style={{ minWidth: 0 }}>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: 17,
+                    fontWeight: 900,
+                    letterSpacing: "-.03em",
+                  }}
+                >
+                  Tampico al Minuto
+                </strong>
+                <span style={{ color: "#0369a1", fontSize: 12, fontWeight: 800 }}>
+                  Información local
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={cerrarPromoTam}
+                aria-label="Cerrar promoción"
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  width: 28,
+                  height: 28,
+                  border: "none",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,.82)",
+                  color: "#0f172a",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  fontWeight: 900,
+                  lineHeight: "28px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ padding: 16 }}>
+              <p
+                style={{
+                  color: "#334155",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  lineHeight: 1.35,
+                  margin: "0 0 14px",
+                }}
+              >
+                Noticias, tráfico y eventos de la zona sur de Tamaulipas.
+              </p>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={seguirTampicoAlMinuto}
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    borderRadius: 14,
+                    background: "#2563eb",
+                    color: "white",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 900,
+                    padding: "11px 12px",
+                    boxShadow: "0 12px 24px rgba(37,99,235,.22)",
+                  }}
+                >
+                  Seguir
+                </button>
+
+                <button
+                  type="button"
+                  onClick={cerrarPromoTam}
+                  style={{
+                    flex: 1,
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 14,
+                    background: "#f8fafc",
+                    color: "#334155",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    fontWeight: 900,
+                    padding: "11px 12px",
+                  }}
+                >
+                  Ahora no
+                </button>
+              </div>
+            </div>
+          </aside>
+        )}
       </main>
     );
   }

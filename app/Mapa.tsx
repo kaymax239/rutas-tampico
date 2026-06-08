@@ -1,18 +1,11 @@
 "use client";
 
-import {
-  Fragment,
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-} from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
-  Polyline,
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
@@ -267,10 +260,6 @@ function obtenerEtiquetaTipoRuta(tipo: TipoRuta | null) {
 
 function obtenerTipoRuta(ruta: Ruta): TipoRuta {
   return /^ruta\s+\d+/i.test(ruta.nombre) ? "urbano" : "micro-local";
-}
-
-function obtenerColorRutaMapa(color: string) {
-  return color.toLowerCase() === "#f97316" ? "#38bdf8" : color;
 }
 
 const busIcon = new L.DivIcon({
@@ -1584,37 +1573,6 @@ export default function Mapa({
           attribution={MAPA_PROFESIONAL.attribution}
           url={MAPA_PROFESIONAL.url}
         />
-
-        {rutasDeZona
-          .filter((ruta) => ruta.nombre === rutaSeleccionada)
-          .map((ruta) => {
-            const colorRutaMapa = obtenerColorRutaMapa(ruta.color);
-
-            return (
-              <Fragment key={ruta.nombre}>
-                <Polyline
-                  positions={ruta.puntos}
-                  pathOptions={{
-                    color: "#ffffff",
-                    weight: 12,
-                    opacity: 0.94,
-                    lineCap: "round",
-                    lineJoin: "round",
-                  }}
-                />
-                <Polyline
-                  positions={ruta.puntos}
-                  pathOptions={{
-                    color: colorRutaMapa,
-                    weight: 8,
-                    opacity: 0.98,
-                    lineCap: "round",
-                    lineJoin: "round",
-                  }}
-                />
-              </Fragment>
-            );
-          })}
 
         {ubicacion && (
           <Marker position={ubicacion} icon={miUbicacionIcon}>

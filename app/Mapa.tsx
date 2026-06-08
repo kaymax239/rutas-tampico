@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -66,6 +66,24 @@ type UsuarioKm = {
   ultimoViaje: string | null;
 };
 
+type CategoriaLugar =
+  | "restaurant"
+  | "convenience_store"
+  | "pharmacy"
+  | "store"
+  | "cafe"
+  | "gas_station";
+
+type LugarCercano = {
+  id: string;
+  nombre: string;
+  categoria: CategoriaLugar;
+  lat: number;
+  lng: number;
+  distanciaMetros: number;
+  rating?: number;
+};
+
 const USER_ID_STORAGE_KEY = "rutasKaymax.userId";
 const VIAJE_ACTIVO_STORAGE_KEY = "rutasKaymax.viajeActivo";
 const EARTH_RADIUS_KM = 6371;
@@ -79,6 +97,29 @@ const MAPA_PROFESIONAL = {
   url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   attribution: "&copy; OpenStreetMap &copy; CARTO",
 };
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const LUGARES_RADIO_M = 100;
+const LUGARES_MAXIMOS = 10;
+const LUGARES_INTERVALO_MS = 30_000;
+const LUGARES_MOVIMIENTO_MINIMO_M = 80;
+const CATEGORIAS_LUGARES: CategoriaLugar[] = [
+  "restaurant",
+  "convenience_store",
+  "pharmacy",
+  "store",
+  "cafe",
+  "gas_station",
+];
+const ETIQUETAS_LUGARES: Record<CategoriaLugar, string> = {
+  restaurant: "Restaurante",
+  convenience_store: "Tienda",
+  pharmacy: "Farmacia",
+  store: "Comercio",
+  cafe: "Café",
+  gas_station: "Gasolinera",
+};
+
+let googlePlacesLoader: Promise<void> | null = null;
 
 function crearUserId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -165,6 +206,10 @@ function distanciaHaversineKm(
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return EARTH_RADIUS_KM * c;
+}
+
+function distanciaMetros(inicio: [number, number], fin: [number, number]) {
+  return distanciaHaversineKm(inicio, fin) * 1000;
 }
 
 function calcularDistanciaRutaKm(puntos: [number, number][]) {
@@ -260,6 +305,157 @@ function obtenerEtiquetaTipoRuta(tipo: TipoRuta | null) {
 
 function obtenerTipoRuta(ruta: Ruta): TipoRuta {
   return /^ruta\s+\d+/i.test(ruta.nombre) ? "urbano" : "micro-local";
+}
+
+function obtenerIconoLugar(categoria: CategoriaLugar) {
+  if (categoria === "restaurant") return "🍽";
+  if (categoria === "convenience_store") return "🏪";
+  if (categoria === "pharmacy") return "✚";
+  if (categoria === "cafe") return "☕";
+  if (categoria === "gas_station") return "⛽";
+
+  return "•";
+}
+
+function crearLugarIcon(categoria: CategoriaLugar) {
+  return new L.DivIcon({
+    html: `
+      <div class="rt-place-marker rt-place-marker--${categoria}" aria-hidden="true">
+        <span>${obtenerIconoLugar(categoria)}</span>
+      </div>
+    `,
+    className: "",
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -18],
+  });
+}
+
+function cargarGooglePlaces(apiKey: string) {
+  if (typeof window === "undefined") {
+    return Promise.reject(new Error("Google Places solo está disponible en el cliente"));
+  }
+
+  const win = window as typeof window & { google?: any };
+
+  if (win.google?.maps?.places) {
+    return Promise.resolve();
+  }
+
+  if (googlePlacesLoader) return googlePlacesLoader;
+
+  googlePlacesLoader = new Promise<void>((resolve, reject) => {
+    const scriptExistente = document.getElementById("google-maps-places-sdk");
+
+    if (scriptExistente) {
+      scriptExistente.addEventListener("load", () => resolve(), { once: true });
+      scriptExistente.addEventListener(
+        "error",
+        () => reject(new Error("No se pudo cargar Google Places")),
+        { once: true }
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "google-maps-places-sdk";
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
+      apiKey
+    )}&libraries=places`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("No se pudo cargar Google Places"));
+    document.head.appendChild(script);
+  });
+
+  return googlePlacesLoader;
+}
+
+function buscarCategoriaLugar(
+  service: any,
+  ubicacion: [number, number],
+  categoria: CategoriaLugar
+) {
+  const win = window as typeof window & { google?: any };
+  const location = new win.google.maps.LatLng(ubicacion[0], ubicacion[1]);
+
+  return new Promise<LugarCercano[]>((resolve) => {
+    service.nearbySearch(
+      {
+        location,
+        radius: LUGARES_RADIO_M,
+        type: categoria,
+      },
+      (results: any[] | null, status: string) => {
+        const placesStatus = win.google.maps.places.PlacesServiceStatus;
+
+        if (status === placesStatus.ZERO_RESULTS) {
+          resolve([]);
+          return;
+        }
+
+        if (status !== placesStatus.OK || !results) {
+          resolve([]);
+          return;
+        }
+
+        const lugares = results
+          .map((place) => {
+            const lat = place.geometry?.location?.lat?.();
+            const lng = place.geometry?.location?.lng?.();
+
+            if (typeof lat !== "number" || typeof lng !== "number") {
+              return null;
+            }
+
+            const distancia = distanciaMetros(ubicacion, [lat, lng]);
+
+            if (distancia > LUGARES_RADIO_M) return null;
+
+            return {
+              id: String(place.place_id || `${categoria}-${lat}-${lng}`),
+              nombre: String(place.name || "Lugar cercano"),
+              categoria,
+              lat,
+              lng,
+              distanciaMetros: Math.round(distancia),
+              rating:
+                typeof place.rating === "number" ? Number(place.rating) : undefined,
+            };
+          })
+          .filter(Boolean) as LugarCercano[];
+
+        resolve(lugares);
+      }
+    );
+  });
+}
+
+async function buscarLugaresGoogle(ubicacion: [number, number]) {
+  await cargarGooglePlaces(GOOGLE_MAPS_API_KEY);
+
+  const contenedor = document.createElement("div");
+  const win = window as typeof window & { google?: any };
+  const service = new win.google.maps.places.PlacesService(contenedor);
+  const resultados = await Promise.all(
+    CATEGORIAS_LUGARES.map((categoria) =>
+      buscarCategoriaLugar(service, ubicacion, categoria)
+    )
+  );
+  const porId = new Map<string, LugarCercano>();
+
+  resultados.flat().forEach((lugar) => {
+    const existente = porId.get(lugar.id);
+
+    if (!existente || lugar.distanciaMetros < existente.distanciaMetros) {
+      porId.set(lugar.id, lugar);
+    }
+  });
+
+  return Array.from(porId.values())
+    .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
+    .slice(0, LUGARES_MAXIMOS);
 }
 
 const busIcon = new L.DivIcon({
@@ -900,6 +1096,14 @@ export default function Mapa({
   const [procesandoViaje, setProcesandoViaje] = useState(false);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [centrarRutaSolicitud, setCentrarRutaSolicitud] = useState(0);
+  const [lugaresActivos, setLugaresActivos] = useState(false);
+  const [lugaresCercanos, setLugaresCercanos] = useState<LugarCercano[]>([]);
+  const [mensajeLugares, setMensajeLugares] = useState("");
+  const [cargandoLugares, setCargandoLugares] = useState(false);
+  const ultimaBusquedaLugares = useRef<{
+    ubicacion: [number, number] | null;
+    timestamp: number;
+  }>({ ubicacion: null, timestamp: 0 });
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -968,6 +1172,74 @@ export default function Mapa({
     return () => unsub();
   }, [userId]);
 
+  useEffect(() => {
+    if (!lugaresActivos) {
+      setLugaresCercanos([]);
+      setMensajeLugares("");
+      setCargandoLugares(false);
+      ultimaBusquedaLugares.current = { ubicacion: null, timestamp: 0 };
+      return;
+    }
+
+    if (!GOOGLE_MAPS_API_KEY) {
+      setLugaresCercanos([]);
+      setMensajeLugares("Lugares cercanos no disponibles.");
+      return;
+    }
+
+    if (!ubicacion) {
+      setLugaresCercanos([]);
+      setMensajeLugares("Activa Mi ubicación para buscar lugares cercanos.");
+      return;
+    }
+
+    const ultima = ultimaBusquedaLugares.current;
+    const ahora = Date.now();
+    const distanciaDesdeUltima = ultima.ubicacion
+      ? distanciaMetros(ultima.ubicacion, ubicacion)
+      : Number.POSITIVE_INFINITY;
+    const puedeBuscarPorTiempo =
+      !ultima.timestamp || ahora - ultima.timestamp >= LUGARES_INTERVALO_MS;
+    const puedeBuscarPorDistancia =
+      !ultima.ubicacion || distanciaDesdeUltima >= LUGARES_MOVIMIENTO_MINIMO_M;
+
+    if (!puedeBuscarPorTiempo || !puedeBuscarPorDistancia) return;
+
+    let cancelado = false;
+
+    setCargandoLugares(true);
+    setMensajeLugares("Buscando lugares cercanos...");
+
+    buscarLugaresGoogle(ubicacion)
+      .then((lugares) => {
+        if (cancelado) return;
+
+        ultimaBusquedaLugares.current = {
+          ubicacion,
+          timestamp: Date.now(),
+        };
+        setLugaresCercanos(lugares);
+        setMensajeLugares(
+          lugares.length > 0
+            ? ""
+            : "No hay lugares cercanos a menos de 100 m."
+        );
+      })
+      .catch(() => {
+        if (cancelado) return;
+
+        setLugaresCercanos([]);
+        setMensajeLugares("Lugares cercanos no disponibles.");
+      })
+      .finally(() => {
+        if (!cancelado) setCargandoLugares(false);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [lugaresActivos, ubicacion]);
+
   const rutasDeZona = useMemo(() => {
     return rutas.filter((ruta) => {
       if (ruta.zona !== zonaSeleccionada) return false;
@@ -995,6 +1267,7 @@ export default function Mapa({
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
+  const lugarCercanoDestacado = lugaresCercanos[0];
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -1543,6 +1816,20 @@ export default function Mapa({
 
         <button
           type="button"
+          onClick={() => setLugaresActivos((activo) => !activo)}
+          className={
+            lugaresActivos
+              ? "rt-fab rt-fab--places rt-fab--active"
+              : "rt-fab rt-fab--places"
+          }
+          aria-label="Activar lugares cercanos"
+        >
+          <span>Lugares</span>
+          {lugaresActivos && <small>{cargandoLugares ? "Buscando" : "Activo"}</small>}
+        </button>
+
+        <button
+          type="button"
           onClick={obtenerMiUbicacion}
           className={
             ubicacion
@@ -1555,6 +1842,28 @@ export default function Mapa({
           {ubicacion && <small>GPS activo</small>}
         </button>
       </div>
+
+      {lugaresActivos && (lugarCercanoDestacado || mensajeLugares) && (
+        <div className="rt-nearby-card">
+          {lugarCercanoDestacado ? (
+            <>
+              <span className="rt-nearby-card__eyebrow">Cerca de ti</span>
+              <strong>
+                {lugarCercanoDestacado.nombre} –{" "}
+                {lugarCercanoDestacado.distanciaMetros} m
+              </strong>
+              <small>
+                {ETIQUETAS_LUGARES[lugarCercanoDestacado.categoria]}
+                {typeof lugarCercanoDestacado.rating === "number"
+                  ? ` · ⭐ ${lugarCercanoDestacado.rating.toFixed(1)}`
+                  : ""}
+              </small>
+            </>
+          ) : (
+            <span>{mensajeLugares}</span>
+          )}
+        </div>
+      )}
 
       <MapContainer
         center={[22.2553, -97.8686]}
@@ -1579,6 +1888,29 @@ export default function Mapa({
             <Popup>Estás aquí</Popup>
           </Marker>
         )}
+
+        {lugaresActivos &&
+          lugaresCercanos.map((lugar) => (
+            <Marker
+              key={lugar.id}
+              position={[lugar.lat, lugar.lng]}
+              icon={crearLugarIcon(lugar.categoria)}
+            >
+              <Popup>
+                <b>{lugar.nombre}</b>
+                <br />
+                {ETIQUETAS_LUGARES[lugar.categoria]}
+                <br />
+                Distancia: {lugar.distanciaMetros} m
+                {typeof lugar.rating === "number" && (
+                  <>
+                    <br />
+                    Rating: {lugar.rating.toFixed(1)}
+                  </>
+                )}
+              </Popup>
+            </Marker>
+          ))}
 
         {busesFiltrados.map((bus) => (
           <BusAnimado key={bus.id} bus={bus} />

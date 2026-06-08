@@ -876,6 +876,11 @@ button {
   color: #ffffff;
 }
 
+.rt-fab--places {
+  background: linear-gradient(135deg, #1e293b, #2563eb);
+  color: #ffffff;
+}
+
 .rt-fab--active {
   box-shadow:
     0 0 0 4px rgba(16, 185, 129, 0.16),
@@ -893,6 +898,92 @@ button {
 .rt-fab:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.rt-nearby-card {
+  position: absolute;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 206px);
+  z-index: 99999;
+  width: min(330px, calc(100vw - 150px));
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(
+    145deg,
+    rgba(2, 6, 23, 0.9),
+    rgba(15, 23, 42, 0.8)
+  );
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.34);
+  color: #e2e8f0;
+  padding: 11px 13px;
+  backdrop-filter: blur(20px);
+}
+
+.rt-nearby-card__eyebrow {
+  color: #67e8f9;
+  display: block;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rt-nearby-card strong {
+  color: #ffffff;
+  display: block;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.15;
+  margin-top: 3px;
+}
+
+.rt-nearby-card small,
+.rt-nearby-card > span {
+  color: #cbd5e1;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.rt-place-marker {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f172a, #2563eb);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.32),
+    0 0 0 5px rgba(37, 99, 235, 0.14);
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.rt-place-marker--restaurant,
+.rt-place-marker--cafe {
+  background: linear-gradient(135deg, #7c2d12, #f97316);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.32),
+    0 0 0 5px rgba(249, 115, 22, 0.14);
+}
+
+.rt-place-marker--pharmacy {
+  background: linear-gradient(135deg, #064e3b, #10b981);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.32),
+    0 0 0 5px rgba(16, 185, 129, 0.14);
+}
+
+.rt-place-marker--convenience_store,
+.rt-place-marker--store {
+  background: linear-gradient(135deg, #1e3a8a, #06b6d4);
+}
+
+.rt-place-marker--gas_station {
+  background: linear-gradient(135deg, #312e81, #8b5cf6);
 }
 
 .rt-bus-marker {
@@ -1088,6 +1179,12 @@ button {
     min-height: 46px;
     font-size: 11px;
     padding: 7px 11px;
+  }
+
+  .rt-nearby-card {
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 196px);
+    width: min(280px, calc(100vw - 138px));
+    padding: 10px 11px;
   }
 }
 

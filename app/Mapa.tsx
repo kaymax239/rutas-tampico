@@ -361,7 +361,7 @@ function cargarGooglePlaces(apiKey: string) {
     script.id = "google-maps-places-sdk";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey
-    )}&libraries=places`;
+    )}&libraries=places&v=weekly&loading=async`;
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();

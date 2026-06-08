@@ -83,7 +83,7 @@ const USUARIO_KM_INICIAL: UsuarioKm = {
   ultimoViaje: null,
 };
 const MAPA_PROFESIONAL = {
-  url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   attribution: "&copy; OpenStreetMap &copy; CARTO",
 };
 
@@ -1454,6 +1454,38 @@ export default function Mapa({
           <span>Zona: {obtenerEtiquetaZona(zonaSeleccionada)}</span>
           <span>Usuarios: {usuariosRutaSeleccionada}</span>
           <span>Camiones: {busesFiltrados.length}</span>
+          <span>Km: {kilometrosUsuario.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="rt-bottom-sheet">
+        <div className="rt-bottom-sheet__header">
+          <div>
+            <span className="rt-bottom-sheet__label">Ruta activa</span>
+            <strong>{rutaSeleccionada || "Ruta seleccionada"}</strong>
+          </div>
+          <span
+            className={
+              ubicacion ? "rt-gps-badge" : "rt-gps-badge rt-gps-badge--off"
+            }
+          >
+            {ubicacion ? "GPS ACTIVO" : "GPS PENDIENTE"}
+          </span>
+        </div>
+
+        <div className="rt-bottom-sheet__metrics">
+          <span>
+            <small>Camiones</small>
+            <b>{busesFiltrados.length}</b>
+          </span>
+          <span>
+            <small>Usuarios</small>
+            <b>{usuariosRutaSeleccionada}</b>
+          </span>
+          <span>
+            <small>Kilómetros</small>
+            <b>{kilometrosUsuario.toFixed(2)}</b>
+          </span>
         </div>
 
         <div className="rt-trip-actions">
@@ -1462,7 +1494,7 @@ export default function Mapa({
             onClick={() => setMostrarDetalleKm((prev) => !prev)}
             className="rt-trip-button rt-trip-button--ghost"
           >
-            {kilometrosUsuario.toFixed(2)} km
+            Ver km
           </button>
 
           <button

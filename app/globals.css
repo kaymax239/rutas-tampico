@@ -563,16 +563,18 @@ button {
   min-height: 100svh;
   position: relative;
   overflow: hidden;
-  background: #020617;
+  background: #171d25;
 }
 
 .rt-map-shell .leaflet-container {
-  background: #020617;
+  background: #171d25;
   font-family: inherit;
 }
 
 .rt-map-shell .leaflet-tile-pane {
-  filter: saturate(0.88) contrast(1.08) brightness(0.92);
+  filter: invert(0.9) hue-rotate(180deg) saturate(0.72) contrast(0.9)
+    brightness(0.82);
+  opacity: 0.98;
 }
 
 .rt-map-shell .leaflet-overlay-pane svg path {
@@ -996,7 +998,7 @@ button {
   position: absolute;
   inset: 8px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.18);
+  background: rgba(34, 211, 238, 0.22);
   animation: rt-bus-pulse 2.2s ease-out infinite;
 }
 
@@ -1007,11 +1009,12 @@ button {
   place-items: center;
   border: 3px solid rgba(255, 255, 255, 0.96);
   border-radius: 16px;
-  background: linear-gradient(135deg, #0f172a, #0f766e);
+  background: linear-gradient(135deg, #0ea5e9, #10b981);
   color: #ffffff;
   box-shadow:
-    0 16px 30px rgba(15, 23, 42, 0.3),
-    0 0 0 5px rgba(15, 118, 110, 0.14);
+    0 16px 30px rgba(0, 0, 0, 0.34),
+    0 0 0 5px rgba(34, 211, 238, 0.16),
+    0 0 26px rgba(16, 185, 129, 0.28);
 }
 
 .rt-bus-marker svg {

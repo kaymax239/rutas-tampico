@@ -118,6 +118,7 @@ const ETIQUETAS_LUGARES: Record<CategoriaLugar, string> = {
   cafe: "Café",
   gas_station: "Gasolinera",
 };
+const ES_DESARROLLO = process.env.NODE_ENV === "development";
 
 let googlePlacesLoader: Promise<void> | null = null;
 
@@ -1267,7 +1268,20 @@ export default function Mapa({
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
-  const lugarCercanoDestacado = lugaresCercanos[0];
+  const lugaresCercanosVisibles = useMemo(() => {
+    if (!ubicacion) return [];
+
+    return lugaresCercanos
+      .map((lugar) => ({
+        ...lugar,
+        distanciaMetros: Math.round(
+          distanciaMetros(ubicacion, [lugar.lat, lugar.lng])
+        ),
+      }))
+      .filter((lugar) => lugar.distanciaMetros <= LUGARES_RADIO_M)
+      .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
+      .slice(0, 3);
+  }, [lugaresCercanos, ubicacion]);
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -1843,21 +1857,36 @@ export default function Mapa({
         </button>
       </div>
 
-      {lugaresActivos && (lugarCercanoDestacado || mensajeLugares) && (
+      {lugaresActivos &&
+        ES_DESARROLLO &&
+        GOOGLE_MAPS_API_KEY &&
+        ubicacion && (
+          <div className="rt-nearby-debug">
+            Negocios cercanos encontrados: {lugaresCercanosVisibles.length}
+          </div>
+        )}
+
+      {lugaresActivos &&
+        (lugaresCercanosVisibles.length > 0 || mensajeLugares) && (
         <div className="rt-nearby-card">
-          {lugarCercanoDestacado ? (
+          {lugaresCercanosVisibles.length > 0 ? (
             <>
               <span className="rt-nearby-card__eyebrow">Cerca de ti</span>
-              <strong>
-                {lugarCercanoDestacado.nombre} –{" "}
-                {lugarCercanoDestacado.distanciaMetros} m
-              </strong>
-              <small>
-                {ETIQUETAS_LUGARES[lugarCercanoDestacado.categoria]}
-                {typeof lugarCercanoDestacado.rating === "number"
-                  ? ` · ⭐ ${lugarCercanoDestacado.rating.toFixed(1)}`
-                  : ""}
-              </small>
+              <div className="rt-nearby-card__list">
+                {lugaresCercanosVisibles.map((lugar) => (
+                  <div key={lugar.id} className="rt-nearby-card__item">
+                    <strong>
+                      {lugar.nombre} – a {lugar.distanciaMetros} m
+                    </strong>
+                    <small>
+                      {ETIQUETAS_LUGARES[lugar.categoria]}
+                      {typeof lugar.rating === "number"
+                        ? ` · ⭐ ${lugar.rating.toFixed(1)}`
+                        : ""}
+                    </small>
+                  </div>
+                ))}
+              </div>
             </>
           ) : (
             <span>{mensajeLugares}</span>
@@ -1890,7 +1919,7 @@ export default function Mapa({
         )}
 
         {lugaresActivos &&
-          lugaresCercanos.map((lugar) => (
+          lugaresCercanosVisibles.map((lugar) => (
             <Marker
               key={lugar.id}
               position={[lugar.lat, lugar.lng]}
@@ -1910,6 +1939,23 @@ export default function Mapa({
                 )}
               </Popup>
             </Marker>
+          ))}
+
+        {lugaresActivos &&
+          lugaresCercanosVisibles.map((lugar) => (
+            <Popup
+              key={`${lugar.id}-popup`}
+              position={[lugar.lat, lugar.lng]}
+              closeButton={false}
+              autoClose={false}
+              closeOnClick={false}
+              className="rt-place-auto-popup"
+            >
+              <b>{lugar.nombre}</b>
+              <br />a {lugar.distanciaMetros} m
+              <br />
+              {ETIQUETAS_LUGARES[lugar.categoria]}
+            </Popup>
           ))}
 
         {busesFiltrados.map((bus) => (

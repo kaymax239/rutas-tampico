@@ -137,8 +137,10 @@ const ES_DESARROLLO = process.env.NODE_ENV === "development";
 const GOOGLE_MAPS_CALLBACK = "__rutasTampicoGoogleMapsReady";
 
 type GooglePlacesRuntime = {
-  PlacesService: any;
-  PlacesServiceStatus: any;
+  PlacesService?: any;
+  PlacesServiceStatus?: any;
+  Place?: any;
+  SearchNearbyRankPreference?: any;
   LatLng: any;
 };
 
@@ -393,17 +395,22 @@ async function confirmarGooglePlaces(
   const PlacesServiceStatus =
     placesLibrary?.PlacesServiceStatus ||
     win.google?.maps?.places?.PlacesServiceStatus;
+  const Place = placesLibrary?.Place || win.google?.maps?.places?.Place;
+  const SearchNearbyRankPreference =
+    placesLibrary?.SearchNearbyRankPreference ||
+    win.google?.maps?.places?.SearchNearbyRankPreference;
 
   console.log("importLibrary places result:", placesLibrary);
   console.log(
     "PlacesService:",
     PlacesService || win.google?.maps?.places?.PlacesService
   );
+  console.log("Place.searchNearby:", typeof Place?.searchNearby === "function");
   console.log("window.google:", !!win.google);
   console.log("window.google.maps:", !!win.google?.maps);
   console.log("window.google.maps.places:", !!win.google?.maps?.places);
 
-  if (!PlacesService) {
+  if (!PlacesService && typeof Place?.searchNearby !== "function") {
     console.error("FALLO: PlacesService no disponible", {
       importLibraryDisponible: typeof win.google.maps.importLibrary === "function",
       placesLibrary,
@@ -416,6 +423,8 @@ async function confirmarGooglePlaces(
     PlacesService,
     PlacesServiceStatus:
       PlacesServiceStatus || { OK: "OK", ZERO_RESULTS: "ZERO_RESULTS" },
+    Place,
+    SearchNearbyRankPreference,
     LatLng: win.google.maps.LatLng,
   };
 }
@@ -481,14 +490,77 @@ function cargarGooglePlaces(apiKey: string): Promise<GooglePlacesRuntime> {
   return googlePlacesLoader;
 }
 
+function obtenerLatLngDePlace(place: any): [number, number] | null {
+  const location = place.location || place.geometry?.location;
+  const lat =
+    typeof location?.lat === "function" ? location.lat() : location?.lat;
+  const lng =
+    typeof location?.lng === "function" ? location.lng() : location?.lng;
+
+  return typeof lat === "number" && typeof lng === "number" ? [lat, lng] : null;
+}
+
+function obtenerNombreDePlace(place: any) {
+  if (typeof place.displayName === "string") return place.displayName;
+  if (typeof place.displayName?.text === "string") return place.displayName.text;
+  if (typeof place.name === "string") return place.name;
+
+  return "Lugar cercano";
+}
+
+function normalizarPlaceCercano(
+  place: any,
+  ubicacion: [number, number],
+  categoria: CategoriaLugar
+): LugarCercano | null {
+  const latLng = obtenerLatLngDePlace(place);
+
+  if (!latLng) {
+    console.info("[Lugares cercanos] lugar descartado sin lat/lng", {
+      categoria,
+      nombre: obtenerNombreDePlace(place),
+    });
+    return null;
+  }
+
+  const [lat, lng] = latLng;
+  const distancia = distanciaMetros(ubicacion, [lat, lng]);
+  const nombre = obtenerNombreDePlace(place);
+
+  console.info("[Lugares cercanos] lugar recibido", {
+    categoria,
+    nombre,
+    lat,
+    lng,
+    distanciaMetros: Math.round(distancia),
+  });
+
+  if (distancia > LUGARES_RADIO_M) return null;
+
+  return {
+    id: String(place.id || place.place_id || `${categoria}-${lat}-${lng}`),
+    nombre,
+    categoria,
+    lat,
+    lng,
+    distanciaMetros: Math.round(distancia),
+    rating: typeof place.rating === "number" ? Number(place.rating) : undefined,
+  };
+}
+
 function buscarCategoriaLugar(
   service: any,
   runtime: GooglePlacesRuntime,
   ubicacion: [number, number],
   busqueda: CategoriaBusquedaLugar
 ) {
-  const location = new runtime.LatLng(ubicacion[0], ubicacion[1]);
   const { categoria, googleType, keyword } = busqueda;
+
+  if (!runtime.PlacesService && typeof runtime.Place?.searchNearby === "function") {
+    return buscarCategoriaLugarNuevaApi(runtime, ubicacion, busqueda);
+  }
+
+  const location = new runtime.LatLng(ubicacion[0], ubicacion[1]);
 
   return new Promise<LugarCercano[]>((resolve) => {
     service.nearbySearch(
@@ -523,41 +595,7 @@ function buscarCategoriaLugar(
         }
 
         const lugares = results
-          .map((place) => {
-            const lat = place.geometry?.location?.lat?.();
-            const lng = place.geometry?.location?.lng?.();
-
-            if (typeof lat !== "number" || typeof lng !== "number") {
-              console.info("[Lugares cercanos] lugar descartado sin lat/lng", {
-                categoria,
-                nombre: place.name || "Sin nombre",
-              });
-              return null;
-            }
-
-            const distancia = distanciaMetros(ubicacion, [lat, lng]);
-
-            console.info("[Lugares cercanos] lugar recibido", {
-              categoria,
-              nombre: place.name || "Sin nombre",
-              lat,
-              lng,
-              distanciaMetros: Math.round(distancia),
-            });
-
-            if (distancia > LUGARES_RADIO_M) return null;
-
-            return {
-              id: String(place.place_id || `${categoria}-${lat}-${lng}`),
-              nombre: String(place.name || "Lugar cercano"),
-              categoria,
-              lat,
-              lng,
-              distanciaMetros: Math.round(distancia),
-              rating:
-                typeof place.rating === "number" ? Number(place.rating) : undefined,
-            };
-          })
+          .map((place) => normalizarPlaceCercano(place, ubicacion, categoria))
           .filter(Boolean) as LugarCercano[];
 
         console.info("[Lugares cercanos] después del filtro", {
@@ -570,6 +608,58 @@ function buscarCategoriaLugar(
       }
     );
   });
+}
+
+async function buscarCategoriaLugarNuevaApi(
+  runtime: GooglePlacesRuntime,
+  ubicacion: [number, number],
+  busqueda: CategoriaBusquedaLugar
+) {
+  const { categoria, googleType } = busqueda;
+
+  try {
+    const response = await runtime.Place.searchNearby({
+      fields: ["id", "displayName", "location", "rating"],
+      includedPrimaryTypes: [googleType],
+      locationRestriction: {
+        center: { lat: ubicacion[0], lng: ubicacion[1] },
+        radius: LUGARES_RADIO_M,
+      },
+      maxResultCount: LUGARES_MAXIMOS,
+      rankPreference:
+        runtime.SearchNearbyRankPreference?.DISTANCE ||
+        runtime.SearchNearbyRankPreference?.POPULARITY,
+    });
+    const places = response?.places || [];
+
+    console.info("[Lugares cercanos] respuesta API nueva", {
+      categoria,
+      googleType,
+      recibidos: places.length,
+      usuario: { lat: ubicacion[0], lng: ubicacion[1] },
+      radioMetros: LUGARES_RADIO_M,
+    });
+
+    const lugares = places
+      .map((place: any) => normalizarPlaceCercano(place, ubicacion, categoria))
+      .filter(Boolean) as LugarCercano[];
+
+    console.info("[Lugares cercanos] después del filtro", {
+      categoria,
+      quedan: lugares.length,
+      radioMetros: LUGARES_RADIO_M,
+    });
+
+    return lugares;
+  } catch (error) {
+    console.error("[Lugares cercanos] error API nueva", {
+      categoria,
+      googleType,
+      error,
+    });
+
+    return [];
+  }
 }
 
 async function buscarLugaresGoogle(ubicacion: [number, number]) {
@@ -592,7 +682,9 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
     throw new Error("Google Maps no cargó");
   }
 
-  const service = new runtime.PlacesService(contenedor);
+  const service = runtime.PlacesService
+    ? new runtime.PlacesService(contenedor)
+    : null;
   const resultados = await Promise.all(
     CATEGORIAS_LUGARES.map((busqueda) =>
       buscarCategoriaLugar(service, runtime, ubicacion, busqueda)

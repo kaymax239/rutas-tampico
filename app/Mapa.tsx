@@ -68,11 +68,20 @@ type UsuarioKm = {
 
 type CategoriaLugar =
   | "restaurant"
-  | "convenience_store"
-  | "pharmacy"
-  | "store"
+  | "fast_food"
   | "cafe"
-  | "gas_station";
+  | "convenience"
+  | "supermarket"
+  | "shop"
+  | "pharmacy"
+  | "bar"
+  | "pub";
+
+type CategoriaBusquedaLugar = {
+  categoria: CategoriaLugar;
+  googleType: string;
+  keyword?: string;
+};
 
 type LugarCercano = {
   id: string;
@@ -98,25 +107,31 @@ const MAPA_PROFESIONAL = {
   attribution: "&copy; OpenStreetMap &copy; CARTO",
 };
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
-const LUGARES_RADIO_M = 100;
+const LUGARES_RADIO_M = 300;
 const LUGARES_MAXIMOS = 10;
 const LUGARES_INTERVALO_MS = 30_000;
 const LUGARES_MOVIMIENTO_MINIMO_M = 80;
-const CATEGORIAS_LUGARES: CategoriaLugar[] = [
-  "restaurant",
-  "convenience_store",
-  "pharmacy",
-  "store",
-  "cafe",
-  "gas_station",
+const CATEGORIAS_LUGARES: CategoriaBusquedaLugar[] = [
+  { categoria: "restaurant", googleType: "restaurant" },
+  { categoria: "fast_food", googleType: "restaurant", keyword: "fast food" },
+  { categoria: "cafe", googleType: "cafe" },
+  { categoria: "convenience", googleType: "convenience_store" },
+  { categoria: "supermarket", googleType: "supermarket" },
+  { categoria: "shop", googleType: "store" },
+  { categoria: "pharmacy", googleType: "pharmacy" },
+  { categoria: "bar", googleType: "bar" },
+  { categoria: "pub", googleType: "bar", keyword: "pub" },
 ];
 const ETIQUETAS_LUGARES: Record<CategoriaLugar, string> = {
   restaurant: "Restaurante",
-  convenience_store: "Tienda",
-  pharmacy: "Farmacia",
-  store: "Comercio",
+  fast_food: "Comida rápida",
   cafe: "Café",
-  gas_station: "Gasolinera",
+  convenience: "Tienda",
+  supermarket: "Supermercado",
+  shop: "Comercio",
+  pharmacy: "Farmacia",
+  bar: "Bar",
+  pub: "Pub",
 };
 const ES_DESARROLLO = process.env.NODE_ENV === "development";
 
@@ -310,10 +325,13 @@ function obtenerTipoRuta(ruta: Ruta): TipoRuta {
 
 function obtenerIconoLugar(categoria: CategoriaLugar) {
   if (categoria === "restaurant") return "🍽";
-  if (categoria === "convenience_store") return "🏪";
+  if (categoria === "fast_food") return "🍔";
+  if (categoria === "convenience") return "🏪";
+  if (categoria === "supermarket") return "🛒";
+  if (categoria === "shop") return "🛍";
   if (categoria === "pharmacy") return "✚";
   if (categoria === "cafe") return "☕";
-  if (categoria === "gas_station") return "⛽";
+  if (categoria === "bar" || categoria === "pub") return "●";
 
   return "•";
 }
@@ -376,20 +394,33 @@ function cargarGooglePlaces(apiKey: string) {
 function buscarCategoriaLugar(
   service: any,
   ubicacion: [number, number],
-  categoria: CategoriaLugar
+  busqueda: CategoriaBusquedaLugar
 ) {
   const win = window as typeof window & { google?: any };
   const location = new win.google.maps.LatLng(ubicacion[0], ubicacion[1]);
+  const { categoria, googleType, keyword } = busqueda;
 
   return new Promise<LugarCercano[]>((resolve) => {
     service.nearbySearch(
       {
         location,
         radius: LUGARES_RADIO_M,
-        type: categoria,
+        type: googleType,
+        ...(keyword ? { keyword } : {}),
       },
       (results: any[] | null, status: string) => {
         const placesStatus = win.google.maps.places.PlacesServiceStatus;
+        const recibidos = results?.length || 0;
+
+        console.info("[Lugares cercanos] respuesta API", {
+          categoria,
+          googleType,
+          keyword: keyword || null,
+          status,
+          recibidos,
+          usuario: { lat: ubicacion[0], lng: ubicacion[1] },
+          radioMetros: LUGARES_RADIO_M,
+        });
 
         if (status === placesStatus.ZERO_RESULTS) {
           resolve([]);
@@ -407,10 +438,22 @@ function buscarCategoriaLugar(
             const lng = place.geometry?.location?.lng?.();
 
             if (typeof lat !== "number" || typeof lng !== "number") {
+              console.info("[Lugares cercanos] lugar descartado sin lat/lng", {
+                categoria,
+                nombre: place.name || "Sin nombre",
+              });
               return null;
             }
 
             const distancia = distanciaMetros(ubicacion, [lat, lng]);
+
+            console.info("[Lugares cercanos] lugar recibido", {
+              categoria,
+              nombre: place.name || "Sin nombre",
+              lat,
+              lng,
+              distanciaMetros: Math.round(distancia),
+            });
 
             if (distancia > LUGARES_RADIO_M) return null;
 
@@ -427,6 +470,12 @@ function buscarCategoriaLugar(
           })
           .filter(Boolean) as LugarCercano[];
 
+        console.info("[Lugares cercanos] después del filtro", {
+          categoria,
+          quedan: lugares.length,
+          radioMetros: LUGARES_RADIO_M,
+        });
+
         resolve(lugares);
       }
     );
@@ -440,8 +489,8 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
   const win = window as typeof window & { google?: any };
   const service = new win.google.maps.places.PlacesService(contenedor);
   const resultados = await Promise.all(
-    CATEGORIAS_LUGARES.map((categoria) =>
-      buscarCategoriaLugar(service, ubicacion, categoria)
+    CATEGORIAS_LUGARES.map((busqueda) =>
+      buscarCategoriaLugar(service, ubicacion, busqueda)
     )
   );
   const porId = new Map<string, LugarCercano>();
@@ -454,9 +503,25 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
     }
   });
 
-  return Array.from(porId.values())
+  const lugaresUnicos = Array.from(porId.values())
     .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
     .slice(0, LUGARES_MAXIMOS);
+
+  console.info("[Lugares cercanos] resumen búsqueda", {
+    usuario: { lat: ubicacion[0], lng: ubicacion[1] },
+    radioMetros: LUGARES_RADIO_M,
+    recibidosApi: resultados.flat().length,
+    despuesFiltroDuplicados: lugaresUnicos.length,
+    lugares: lugaresUnicos.map((lugar) => ({
+      nombre: lugar.nombre,
+      categoria: lugar.categoria,
+      lat: lugar.lat,
+      lng: lugar.lng,
+      distanciaMetros: lugar.distanciaMetros,
+    })),
+  });
+
+  return lugaresUnicos;
 }
 
 const busIcon = new L.DivIcon({
@@ -1223,7 +1288,7 @@ export default function Mapa({
         setMensajeLugares(
           lugares.length > 0
             ? ""
-            : "No hay lugares cercanos a menos de 100 m."
+            : "No encontramos lugares en 300 m. Activa ubicación precisa o prueba moverte unos metros."
         );
       })
       .catch(() => {

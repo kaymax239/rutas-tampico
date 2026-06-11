@@ -1019,6 +1019,7 @@ button {
 }
 
 .rt-place-marker--restaurant,
+.rt-place-marker--fast_food,
 .rt-place-marker--cafe {
   background: linear-gradient(135deg, #7c2d12, #f97316);
   box-shadow:
@@ -1033,12 +1034,14 @@ button {
     0 0 0 5px rgba(16, 185, 129, 0.14);
 }
 
-.rt-place-marker--convenience_store,
-.rt-place-marker--store {
+.rt-place-marker--convenience,
+.rt-place-marker--supermarket,
+.rt-place-marker--shop {
   background: linear-gradient(135deg, #1e3a8a, #06b6d4);
 }
 
-.rt-place-marker--gas_station {
+.rt-place-marker--bar,
+.rt-place-marker--pub {
   background: linear-gradient(135deg, #312e81, #8b5cf6);
 }
 

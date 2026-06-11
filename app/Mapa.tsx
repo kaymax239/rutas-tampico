@@ -357,6 +357,10 @@ function cargarGooglePlaces(apiKey: string) {
 
   const win = window as typeof window & { google?: any };
 
+  console.log("window.google:", !!win.google);
+  console.log("window.google.maps:", !!win.google?.maps);
+  console.log("window.google.maps.places:", !!win.google?.maps?.places);
+
   if (win.google?.maps?.places) {
     return Promise.resolve();
   }
@@ -370,7 +374,10 @@ function cargarGooglePlaces(apiKey: string) {
       scriptExistente.addEventListener("load", () => resolve(), { once: true });
       scriptExistente.addEventListener(
         "error",
-        () => reject(new Error("No se pudo cargar Google Places")),
+        () => {
+          console.error("FALLO: GOOGLE NO CARGO");
+          reject(new Error("No se pudo cargar Google Places"));
+        },
         { once: true }
       );
       return;
@@ -384,7 +391,10 @@ function cargarGooglePlaces(apiKey: string) {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("No se pudo cargar Google Places"));
+    script.onerror = () => {
+      console.error("FALLO: GOOGLE NO CARGO");
+      reject(new Error("No se pudo cargar Google Places"));
+    };
     document.head.appendChild(script);
   });
 
@@ -487,6 +497,26 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
 
   const contenedor = document.createElement("div");
   const win = window as typeof window & { google?: any };
+
+  console.log("window.google:", !!win.google);
+  console.log("window.google.maps:", !!win.google?.maps);
+  console.log("window.google.maps.places:", !!win.google?.maps?.places);
+
+  if (!win.google) {
+    console.error("FALLO: GOOGLE NO CARGO");
+    throw new Error("Google no cargó");
+  }
+
+  if (!win.google.maps) {
+    console.error("FALLO: GOOGLE MAPS NO CARGO");
+    throw new Error("Google Maps no cargó");
+  }
+
+  if (!win.google.maps.places) {
+    console.error("FALLO: PLACES NO CARGO");
+    throw new Error("Google Places no cargó");
+  }
+
   const service = new win.google.maps.places.PlacesService(contenedor);
   const resultados = await Promise.all(
     CATEGORIAS_LUGARES.map((busqueda) =>
@@ -1247,7 +1277,18 @@ export default function Mapa({
       return;
     }
 
+    console.log("GOOGLE_MAPS_API_KEY:", GOOGLE_MAPS_API_KEY);
+
+    if (typeof window !== "undefined") {
+      const win = window as typeof window & { google?: any };
+
+      console.log("window.google:", !!win.google);
+      console.log("window.google.maps:", !!win.google?.maps);
+      console.log("window.google.maps.places:", !!win.google?.maps?.places);
+    }
+
     if (!GOOGLE_MAPS_API_KEY) {
+      console.error("FALLO: API KEY VACIA");
       setLugaresCercanos([]);
       setMensajeLugares("Lugares cercanos no disponibles.");
       return;
@@ -1291,9 +1332,10 @@ export default function Mapa({
             : "No encontramos lugares en 300 m. Activa ubicación precisa o prueba moverte unos metros."
         );
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelado) return;
 
+        console.error("FALLO: ERROR EN buscarLugaresGoogle", error);
         setLugaresCercanos([]);
         setMensajeLugares("Lugares cercanos no disponibles.");
       })

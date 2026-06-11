@@ -371,13 +371,13 @@ export default function Home() {
             aria-label="Promoción Tampico al Minuto"
             style={{
               position: "fixed",
-              right: 18,
-              bottom: mostrarPromoMax ? 354 : 18,
+              right: 14,
+              bottom: mostrarPromoMax ? 258 : 14,
               zIndex: 50,
-              width: "min(320px, calc(100vw - 32px))",
+              width: "min(224px, calc(100vw - 24px))",
               overflow: "hidden",
               border: "1px solid rgba(14,165,233,.18)",
-              borderRadius: 22,
+              borderRadius: 18,
               background: "white",
               color: "#0f172a",
               boxShadow:
@@ -386,27 +386,27 @@ export default function Home() {
           >
             <div
               style={{
-                minHeight: 66,
+                minHeight: 50,
                 background:
                   "linear-gradient(135deg, #dbeafe 0%, #bae6fd 48%, #e0f2fe 100%)",
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
-                padding: "14px 16px",
+                gap: 9,
+                padding: "10px 12px",
                 position: "relative",
               }}
             >
               <div
                 aria-hidden="true"
                 style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 14,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 11,
                   background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
                   color: "white",
                   display: "grid",
                   placeItems: "center",
-                  fontSize: 13,
+                  fontSize: 10,
                   fontWeight: 900,
                   letterSpacing: "-.04em",
                   boxShadow: "0 10px 24px rgba(37,99,235,.25)",
@@ -419,14 +419,14 @@ export default function Home() {
                 <strong
                   style={{
                     display: "block",
-                    fontSize: 17,
+                    fontSize: 14,
                     fontWeight: 900,
                     letterSpacing: "-.03em",
                   }}
                 >
                   Tampico al Minuto
                 </strong>
-                <span style={{ color: "#0369a1", fontSize: 12, fontWeight: 800 }}>
+                <span style={{ color: "#0369a1", fontSize: 10, fontWeight: 800 }}>
                   Información local
                 </span>
               </div>
@@ -437,51 +437,51 @@ export default function Home() {
                 aria-label="Cerrar promoción"
                 style={{
                   position: "absolute",
-                  top: 10,
-                  right: 10,
-                  width: 28,
-                  height: 28,
+                  top: 7,
+                  right: 7,
+                  width: 22,
+                  height: 22,
                   border: "none",
                   borderRadius: 999,
                   background: "rgba(255,255,255,.82)",
                   color: "#0f172a",
                   cursor: "pointer",
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: 900,
-                  lineHeight: "28px",
+                  lineHeight: "22px",
                 }}
               >
                 ×
               </button>
             </div>
 
-            <div style={{ padding: 16 }}>
+            <div style={{ padding: 11 }}>
               <p
                 style={{
                   color: "#334155",
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: 700,
-                  lineHeight: 1.35,
-                  margin: "0 0 14px",
+                  lineHeight: 1.3,
+                  margin: "0 0 10px",
                 }}
               >
                 Noticias, tráfico y eventos de la zona sur de Tamaulipas.
               </p>
 
-              <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "flex", gap: 7 }}>
                 <button
                   type="button"
                   onClick={seguirTampicoAlMinuto}
                   style={{
                     flex: 1,
                     border: "none",
-                    borderRadius: 14,
+                    borderRadius: 11,
                     background: "#2563eb",
                     color: "white",
                     cursor: "pointer",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 900,
-                    padding: "11px 12px",
+                    padding: "8px 9px",
                     boxShadow: "0 12px 24px rgba(37,99,235,.22)",
                   }}
                 >
@@ -494,13 +494,13 @@ export default function Home() {
                   style={{
                     flex: 1,
                     border: "1px solid #e2e8f0",
-                    borderRadius: 14,
+                    borderRadius: 11,
                     background: "#f8fafc",
                     color: "#334155",
                     cursor: "pointer",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 900,
-                    padding: "11px 12px",
+                    padding: "8px 9px",
                   }}
                 >
                   Ahora no
@@ -515,13 +515,13 @@ export default function Home() {
             aria-label="Promoción MAX CLEANERS"
             style={{
               position: "fixed",
-              right: 18,
-              bottom: 18,
+              right: 14,
+              bottom: 14,
               zIndex: 51,
-              width: "min(320px, calc(100vw - 32px))",
+              width: "min(224px, calc(100vw - 24px))",
               overflow: "hidden",
               border: "1px solid rgba(37,99,235,.18)",
-              borderRadius: 22,
+              borderRadius: 18,
               background: "white",
               color: "#0f172a",
               boxShadow:
@@ -530,13 +530,13 @@ export default function Home() {
           >
             <div
               style={{
-                minHeight: 72,
+                minHeight: 54,
                 background:
                   "linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #38bdf8 100%)",
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
-                padding: "14px 16px",
+                gap: 9,
+                padding: "10px 12px",
                 position: "relative",
                 color: "white",
               }}
@@ -544,14 +544,14 @@ export default function Home() {
               <div
                 aria-hidden="true"
                 style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 16,
+                  width: 34,
+                  height: 34,
+                  borderRadius: 12,
                   background: "rgba(255,255,255,.96)",
                   color: "#1d4ed8",
                   display: "grid",
                   placeItems: "center",
-                  fontSize: 10,
+                  fontSize: 7.5,
                   fontWeight: 950,
                   lineHeight: 1,
                   textAlign: "center",
@@ -564,18 +564,18 @@ export default function Home() {
                 CLEANERS
               </div>
 
-              <div style={{ minWidth: 0, paddingRight: 26 }}>
+              <div style={{ minWidth: 0, paddingRight: 22 }}>
                 <strong
                   style={{
                     display: "block",
-                    fontSize: 18,
+                    fontSize: 14,
                     fontWeight: 950,
                     letterSpacing: "-.03em",
                   }}
                 >
                   🧺 MAX CLEANERS
                 </strong>
-                <span style={{ color: "#dbeafe", fontSize: 12, fontWeight: 850 }}>
+                <span style={{ color: "#dbeafe", fontSize: 10, fontWeight: 850 }}>
                   Lavandería y Planchaduría
                 </span>
               </div>
@@ -586,52 +586,52 @@ export default function Home() {
                 aria-label="Cerrar promoción MAX CLEANERS"
                 style={{
                   position: "absolute",
-                  top: 10,
-                  right: 10,
-                  width: 28,
-                  height: 28,
+                  top: 7,
+                  right: 7,
+                  width: 22,
+                  height: 22,
                   border: "none",
                   borderRadius: 999,
                   background: "rgba(255,255,255,.9)",
                   color: "#1e3a8a",
                   cursor: "pointer",
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: 900,
-                  lineHeight: "28px",
+                  lineHeight: "22px",
                 }}
               >
                 ×
               </button>
             </div>
 
-            <div style={{ padding: 16 }}>
+            <div style={{ padding: 11 }}>
               <p
                 style={{
                   color: "#334155",
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: 750,
-                  lineHeight: 1.4,
-                  margin: "0 0 14px",
+                  lineHeight: 1.3,
+                  margin: "0 0 10px",
                 }}
               >
                 Servicio profesional de lavado, secado y planchado. Atención
                 rápida, excelente calidad y precios accesibles.
               </p>
 
-              <div style={{ display: "flex", gap: 10 }}>
+              <div style={{ display: "flex", gap: 7 }}>
                 <button
                   type="button"
                   onClick={llamarMaxCleaners}
                   style={{
                     flex: 1,
                     border: "none",
-                    borderRadius: 14,
+                    borderRadius: 11,
                     background: "#2563eb",
                     color: "white",
                     cursor: "pointer",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 900,
-                    padding: "11px 12px",
+                    padding: "8px 9px",
                     boxShadow: "0 12px 24px rgba(37,99,235,.22)",
                   }}
                 >
@@ -644,13 +644,13 @@ export default function Home() {
                   style={{
                     flex: 1,
                     border: "1px solid #dbeafe",
-                    borderRadius: 14,
+                    borderRadius: 11,
                     background: "#eff6ff",
                     color: "#1d4ed8",
                     cursor: "pointer",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 900,
-                    padding: "11px 12px",
+                    padding: "8px 9px",
                   }}
                 >
                   Más información

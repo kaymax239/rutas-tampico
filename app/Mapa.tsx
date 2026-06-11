@@ -134,8 +134,15 @@ const ETIQUETAS_LUGARES: Record<CategoriaLugar, string> = {
   pub: "Pub",
 };
 const ES_DESARROLLO = process.env.NODE_ENV === "development";
+const GOOGLE_MAPS_CALLBACK = "__rutasTampicoGoogleMapsReady";
 
-let googlePlacesLoader: Promise<void> | null = null;
+type GooglePlacesRuntime = {
+  PlacesService: any;
+  PlacesServiceStatus: any;
+  LatLng: any;
+};
+
+let googlePlacesLoader: Promise<GooglePlacesRuntime> | null = null;
 
 function crearUserId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -350,7 +357,9 @@ function crearLugarIcon(categoria: CategoriaLugar) {
   });
 }
 
-async function confirmarGooglePlaces(win: typeof window & { google?: any }) {
+async function confirmarGooglePlaces(
+  win: typeof window & { google?: any; [GOOGLE_MAPS_CALLBACK]?: () => void }
+): Promise<GooglePlacesRuntime> {
   console.log("window.google:", !!win.google);
   console.log("window.google.maps:", !!win.google?.maps);
   console.log("window.google.maps.places:", !!win.google?.maps?.places);
@@ -365,10 +374,13 @@ async function confirmarGooglePlaces(win: typeof window & { google?: any }) {
     throw new Error("Google Maps no cargó");
   }
 
+  let placesLibrary: any = null;
+
   if (!win.google.maps.places) {
     if (typeof win.google.maps.importLibrary === "function") {
       try {
-        await win.google.maps.importLibrary("places");
+        placesLibrary = await win.google.maps.importLibrary("places");
+        console.log("importLibrary places result:", placesLibrary);
       } catch (error) {
         console.error("FALLO: PLACES NO CARGO", error);
         throw error;
@@ -376,24 +388,47 @@ async function confirmarGooglePlaces(win: typeof window & { google?: any }) {
     }
   }
 
+  const PlacesService =
+    placesLibrary?.PlacesService || win.google?.maps?.places?.PlacesService;
+  const PlacesServiceStatus =
+    placesLibrary?.PlacesServiceStatus ||
+    win.google?.maps?.places?.PlacesServiceStatus;
+
+  console.log("importLibrary places result:", placesLibrary);
+  console.log(
+    "PlacesService:",
+    PlacesService || win.google?.maps?.places?.PlacesService
+  );
   console.log("window.google:", !!win.google);
   console.log("window.google.maps:", !!win.google?.maps);
   console.log("window.google.maps.places:", !!win.google?.maps?.places);
 
-  if (!win.google.maps.places) {
-    console.error("FALLO: PLACES NO CARGO", {
+  if (!PlacesService) {
+    console.error("FALLO: PlacesService no disponible", {
       importLibraryDisponible: typeof win.google.maps.importLibrary === "function",
+      placesLibrary,
+      windowPlaces: win.google?.maps?.places,
     });
-    throw new Error("Google Places no cargó");
+    throw new Error("PlacesService no disponible");
   }
+
+  return {
+    PlacesService,
+    PlacesServiceStatus:
+      PlacesServiceStatus || { OK: "OK", ZERO_RESULTS: "ZERO_RESULTS" },
+    LatLng: win.google.maps.LatLng,
+  };
 }
 
-function cargarGooglePlaces(apiKey: string) {
+function cargarGooglePlaces(apiKey: string): Promise<GooglePlacesRuntime> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("Google Places solo está disponible en el cliente"));
   }
 
-  const win = window as typeof window & { google?: any };
+  const win = window as typeof window & {
+    google?: any;
+    [GOOGLE_MAPS_CALLBACK]?: () => void;
+  };
 
   if (win.google?.maps) {
     return confirmarGooglePlaces(win);
@@ -403,11 +438,13 @@ function cargarGooglePlaces(apiKey: string) {
     return googlePlacesLoader.then(() => confirmarGooglePlaces(win));
   }
 
-  googlePlacesLoader = new Promise<void>((resolve, reject) => {
+  googlePlacesLoader = new Promise<GooglePlacesRuntime>((resolve, reject) => {
     const scriptExistente = document.getElementById("google-maps-places-sdk");
     const confirmarCarga = () => {
       confirmarGooglePlaces(win).then(resolve).catch(reject);
     };
+
+    win[GOOGLE_MAPS_CALLBACK] = confirmarCarga;
 
     if (scriptExistente) {
       if (win.google?.maps) {
@@ -431,10 +468,9 @@ function cargarGooglePlaces(apiKey: string) {
     script.id = "google-maps-places-sdk";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey
-    )}&libraries=places&v=weekly&loading=async`;
+    )}&libraries=places&v=weekly&loading=async&callback=${GOOGLE_MAPS_CALLBACK}`;
     script.async = true;
     script.defer = true;
-    script.onload = confirmarCarga;
     script.onerror = () => {
       console.error("FALLO: GOOGLE NO CARGO");
       reject(new Error("No se pudo cargar Google Places"));
@@ -447,11 +483,11 @@ function cargarGooglePlaces(apiKey: string) {
 
 function buscarCategoriaLugar(
   service: any,
+  runtime: GooglePlacesRuntime,
   ubicacion: [number, number],
   busqueda: CategoriaBusquedaLugar
 ) {
-  const win = window as typeof window & { google?: any };
-  const location = new win.google.maps.LatLng(ubicacion[0], ubicacion[1]);
+  const location = new runtime.LatLng(ubicacion[0], ubicacion[1]);
   const { categoria, googleType, keyword } = busqueda;
 
   return new Promise<LugarCercano[]>((resolve) => {
@@ -463,7 +499,7 @@ function buscarCategoriaLugar(
         ...(keyword ? { keyword } : {}),
       },
       (results: any[] | null, status: string) => {
-        const placesStatus = win.google.maps.places.PlacesServiceStatus;
+        const placesStatus = runtime.PlacesServiceStatus;
         const recibidos = results?.length || 0;
 
         console.info("[Lugares cercanos] respuesta API", {
@@ -537,7 +573,7 @@ function buscarCategoriaLugar(
 }
 
 async function buscarLugaresGoogle(ubicacion: [number, number]) {
-  await cargarGooglePlaces(GOOGLE_MAPS_API_KEY);
+  const runtime = await cargarGooglePlaces(GOOGLE_MAPS_API_KEY);
 
   const contenedor = document.createElement("div");
   const win = window as typeof window & { google?: any };
@@ -556,15 +592,10 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
     throw new Error("Google Maps no cargó");
   }
 
-  if (!win.google.maps.places) {
-    console.error("FALLO: PLACES NO CARGO");
-    throw new Error("Google Places no cargó");
-  }
-
-  const service = new win.google.maps.places.PlacesService(contenedor);
+  const service = new runtime.PlacesService(contenedor);
   const resultados = await Promise.all(
     CATEGORIAS_LUGARES.map((busqueda) =>
-      buscarCategoriaLugar(service, ubicacion, busqueda)
+      buscarCategoriaLugar(service, runtime, ubicacion, busqueda)
     )
   );
   const porId = new Map<string, LugarCercano>();

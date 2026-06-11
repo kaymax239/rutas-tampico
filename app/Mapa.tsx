@@ -410,13 +410,13 @@ async function confirmarGooglePlaces(
   console.log("window.google.maps:", !!win.google?.maps);
   console.log("window.google.maps.places:", !!win.google?.maps?.places);
 
-  if (!PlacesService && typeof Place?.searchNearby !== "function") {
-    console.error("FALLO: PlacesService no disponible", {
+  if (typeof Place?.searchNearby !== "function") {
+    console.error("FALLO: Places API (New) no disponible", {
       importLibraryDisponible: typeof win.google.maps.importLibrary === "function",
       placesLibrary,
       windowPlaces: win.google?.maps?.places,
     });
-    throw new Error("PlacesService no disponible");
+    throw new Error("Places API (New) no disponible");
   }
 
   return {
@@ -549,65 +549,11 @@ function normalizarPlaceCercano(
 }
 
 function buscarCategoriaLugar(
-  service: any,
   runtime: GooglePlacesRuntime,
   ubicacion: [number, number],
   busqueda: CategoriaBusquedaLugar
 ) {
-  const { categoria, googleType, keyword } = busqueda;
-
-  if (typeof runtime.Place?.searchNearby === "function") {
-    return buscarCategoriaLugarNuevaApi(runtime, ubicacion, busqueda);
-  }
-
-  const location = new runtime.LatLng(ubicacion[0], ubicacion[1]);
-
-  return new Promise<LugarCercano[]>((resolve) => {
-    service.nearbySearch(
-      {
-        location,
-        radius: LUGARES_RADIO_M,
-        type: googleType,
-        ...(keyword ? { keyword } : {}),
-      },
-      (results: any[] | null, status: string) => {
-        const placesStatus = runtime.PlacesServiceStatus;
-        const recibidos = results?.length || 0;
-
-        console.info("[Lugares cercanos] respuesta API", {
-          categoria,
-          googleType,
-          keyword: keyword || null,
-          status,
-          recibidos,
-          usuario: { lat: ubicacion[0], lng: ubicacion[1] },
-          radioMetros: LUGARES_RADIO_M,
-        });
-
-        if (status === placesStatus.ZERO_RESULTS) {
-          resolve([]);
-          return;
-        }
-
-        if (status !== placesStatus.OK || !results) {
-          resolve([]);
-          return;
-        }
-
-        const lugares = results
-          .map((place) => normalizarPlaceCercano(place, ubicacion, categoria))
-          .filter(Boolean) as LugarCercano[];
-
-        console.info("[Lugares cercanos] después del filtro", {
-          categoria,
-          quedan: lugares.length,
-          radioMetros: LUGARES_RADIO_M,
-        });
-
-        resolve(lugares);
-      }
-    );
-  });
+  return buscarCategoriaLugarNuevaApi(runtime, ubicacion, busqueda);
 }
 
 async function buscarCategoriaLugarNuevaApi(
@@ -665,7 +611,6 @@ async function buscarCategoriaLugarNuevaApi(
 async function buscarLugaresGoogle(ubicacion: [number, number]) {
   const runtime = await cargarGooglePlaces(GOOGLE_MAPS_API_KEY);
 
-  const contenedor = document.createElement("div");
   const win = window as typeof window & { google?: any };
 
   console.log("window.google:", !!win.google);
@@ -682,12 +627,9 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
     throw new Error("Google Maps no cargó");
   }
 
-  const service = runtime.PlacesService
-    ? new runtime.PlacesService(contenedor)
-    : null;
   const resultados = await Promise.all(
     CATEGORIAS_LUGARES.map((busqueda) =>
-      buscarCategoriaLugar(service, runtime, ubicacion, busqueda)
+      buscarCategoriaLugar(runtime, ubicacion, busqueda)
     )
   );
   const porId = new Map<string, LugarCercano>();

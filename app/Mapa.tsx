@@ -477,7 +477,7 @@ function cargarGooglePlaces(apiKey: string): Promise<GooglePlacesRuntime> {
     script.id = "google-maps-places-sdk";
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
       apiKey
-    )}&libraries=places&v=weekly&loading=async&callback=${GOOGLE_MAPS_CALLBACK}`;
+    )}&v=weekly&loading=async&callback=${GOOGLE_MAPS_CALLBACK}`;
     script.async = true;
     script.defer = true;
     script.onerror = () => {
@@ -556,7 +556,7 @@ function buscarCategoriaLugar(
 ) {
   const { categoria, googleType, keyword } = busqueda;
 
-  if (!runtime.PlacesService && typeof runtime.Place?.searchNearby === "function") {
+  if (typeof runtime.Place?.searchNearby === "function") {
     return buscarCategoriaLugarNuevaApi(runtime, ubicacion, busqueda);
   }
 

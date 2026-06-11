@@ -1157,6 +1157,16 @@ const rutas: Ruta[] = [
   },
   {
     zona: "Tampico / Madero",
+    nombre: "Ampliación Enrique Cárdenas",
+    color: "#38bdf8",
+    puntos: [
+      [22.2553, -97.8686],
+      [22.265, -97.861],
+      [22.279, -97.852],
+    ],
+  },
+  {
+    zona: "Tampico / Madero",
     nombre: "Madero Kehoe",
     color: "#c084fc",
     puntos: [

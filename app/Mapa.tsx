@@ -350,6 +350,44 @@ function crearLugarIcon(categoria: CategoriaLugar) {
   });
 }
 
+async function confirmarGooglePlaces(win: typeof window & { google?: any }) {
+  console.log("window.google:", !!win.google);
+  console.log("window.google.maps:", !!win.google?.maps);
+  console.log("window.google.maps.places:", !!win.google?.maps?.places);
+
+  if (!win.google) {
+    console.error("FALLO: GOOGLE NO CARGO");
+    throw new Error("Google no cargó");
+  }
+
+  if (!win.google.maps) {
+    console.error("FALLO: GOOGLE MAPS NO CARGO");
+    throw new Error("Google Maps no cargó");
+  }
+
+  if (!win.google.maps.places) {
+    if (typeof win.google.maps.importLibrary === "function") {
+      try {
+        await win.google.maps.importLibrary("places");
+      } catch (error) {
+        console.error("FALLO: PLACES NO CARGO", error);
+        throw error;
+      }
+    }
+  }
+
+  console.log("window.google:", !!win.google);
+  console.log("window.google.maps:", !!win.google?.maps);
+  console.log("window.google.maps.places:", !!win.google?.maps?.places);
+
+  if (!win.google.maps.places) {
+    console.error("FALLO: PLACES NO CARGO", {
+      importLibraryDisponible: typeof win.google.maps.importLibrary === "function",
+    });
+    throw new Error("Google Places no cargó");
+  }
+}
+
 function cargarGooglePlaces(apiKey: string) {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("Google Places solo está disponible en el cliente"));
@@ -357,21 +395,27 @@ function cargarGooglePlaces(apiKey: string) {
 
   const win = window as typeof window & { google?: any };
 
-  console.log("window.google:", !!win.google);
-  console.log("window.google.maps:", !!win.google?.maps);
-  console.log("window.google.maps.places:", !!win.google?.maps?.places);
-
-  if (win.google?.maps?.places) {
-    return Promise.resolve();
+  if (win.google?.maps) {
+    return confirmarGooglePlaces(win);
   }
 
-  if (googlePlacesLoader) return googlePlacesLoader;
+  if (googlePlacesLoader) {
+    return googlePlacesLoader.then(() => confirmarGooglePlaces(win));
+  }
 
   googlePlacesLoader = new Promise<void>((resolve, reject) => {
     const scriptExistente = document.getElementById("google-maps-places-sdk");
+    const confirmarCarga = () => {
+      confirmarGooglePlaces(win).then(resolve).catch(reject);
+    };
 
     if (scriptExistente) {
-      scriptExistente.addEventListener("load", () => resolve(), { once: true });
+      if (win.google?.maps) {
+        confirmarCarga();
+        return;
+      }
+
+      scriptExistente.addEventListener("load", confirmarCarga, { once: true });
       scriptExistente.addEventListener(
         "error",
         () => {
@@ -390,7 +434,7 @@ function cargarGooglePlaces(apiKey: string) {
     )}&libraries=places&v=weekly&loading=async`;
     script.async = true;
     script.defer = true;
-    script.onload = () => resolve();
+    script.onload = confirmarCarga;
     script.onerror = () => {
       console.error("FALLO: GOOGLE NO CARGO");
       reject(new Error("No se pudo cargar Google Places"));

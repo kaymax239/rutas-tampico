@@ -59,6 +59,20 @@ function extraerProductos(data: unknown): Array<Record<string, unknown>> {
   return [];
 }
 
+function extraerRespuestaTaecel(data: unknown): Record<string, unknown> | null {
+  if (!data || typeof data !== "object") return null;
+
+  const root = data as Record<string, unknown>;
+
+  if ("success" in root || "message" in root) return root;
+
+  if (root.data && typeof root.data === "object") {
+    return extraerRespuestaTaecel(root.data);
+  }
+
+  return null;
+}
+
 function obtenerSku(producto: Record<string, unknown>) {
   const value =
     producto.SKU ||
@@ -139,6 +153,19 @@ function JsonBlock({ value }: { value: unknown }) {
   );
 }
 
+async function leerRespuesta(response: Response) {
+  const text = await response.text();
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return {
+      raw: text,
+      parseError: "La respuesta no es JSON.",
+    };
+  }
+}
+
 export default function TaecelTestPage() {
   const [productsState, setProductsState] = useState<ApiState>({
     loading: false,
@@ -164,6 +191,11 @@ export default function TaecelTestPage() {
     () => extraerProductos(productsState.data),
     [productsState.data]
   );
+  const respuestaProductos = useMemo(
+    () => extraerRespuestaTaecel(productsState.data),
+    [productsState.data]
+  );
+  const primerSku = productos[0] ? obtenerSku(productos[0]) : "";
 
   const registrarLog = (action: string, request: unknown, response: unknown) => {
     setCertLogs((logs) => [
@@ -207,7 +239,7 @@ export default function TaecelTestPage() {
         method: "POST",
         cache: "no-store",
       });
-      const data = await response.json();
+      const data = await leerRespuesta(response);
 
       registrarLog("getProducts", { endpoint: "/api/taecel/products" }, data);
       setProductsState({
@@ -385,6 +417,49 @@ export default function TaecelTestPage() {
           >
             {productsState.loading ? "Cargando..." : "Cargar productos"}
           </button>
+
+          {productsState.data !== null && (
+            <div
+              style={{
+                display: "grid",
+                gap: 8,
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                border: "1px solid rgba(56,189,248,.22)",
+                borderRadius: 16,
+                background: "rgba(8,47,73,.36)",
+                padding: 12,
+              }}
+            >
+              <div>
+                <small style={{ color: "#93c5fd", fontWeight: 900 }}>
+                  success
+                </small>
+                <div style={{ fontWeight: 900 }}>
+                  {String(respuestaProductos?.success ?? "N/D")}
+                </div>
+              </div>
+              <div>
+                <small style={{ color: "#93c5fd", fontWeight: 900 }}>
+                  message
+                </small>
+                <div style={{ fontWeight: 900 }}>
+                  {String(respuestaProductos?.message ?? "Sin mensaje")}
+                </div>
+              </div>
+              <div>
+                <small style={{ color: "#93c5fd", fontWeight: 900 }}>
+                  productos
+                </small>
+                <div style={{ fontWeight: 900 }}>{productos.length}</div>
+              </div>
+              <div>
+                <small style={{ color: "#93c5fd", fontWeight: 900 }}>
+                  primer SKU
+                </small>
+                <div style={{ fontWeight: 900 }}>{primerSku || "N/D"}</div>
+              </div>
+            </div>
+          )}
 
           {productos.length > 0 && (
             <label style={{ display: "grid", gap: 6, fontWeight: 800 }}>

@@ -20,6 +20,10 @@ function buildUrl(apiUrl: string, endpoint: string) {
 async function parseResponse(response: Response): Promise<TaecelParsedResponse> {
   const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
+
+  console.log("Status:", response.status);
+  console.log(text.substring(0, 500));
+
   let data: unknown = text;
 
   if (contentType.includes("application/json")) {
@@ -66,9 +70,11 @@ export async function POST() {
   try {
     const endpoint = buildUrl(config.apiUrl, "getProducts");
 
+    console.log("TAECEL URL:", process.env.TAECEL_API_URL);
     console.info("[TAECEL products] request", {
       endpoint,
       method: "POST",
+      contentType: "application/x-www-form-urlencoded",
       body: {
         key: "[REDACTED]",
         nip: "[REDACTED]",

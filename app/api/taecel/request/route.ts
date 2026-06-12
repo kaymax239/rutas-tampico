@@ -1,6 +1,7 @@
 type RequestPayload = {
   sku?: string;
   phone?: string;
+  amount?: string;
   extra?: Record<string, string>;
 };
 
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
   const payload = (await request.json().catch(() => ({}))) as RequestPayload;
   const sku = String(payload.sku || "").trim();
   const phone = String(payload.phone || "").trim();
+  const amount = String(payload.amount || "").trim();
 
   if (!sku || !phone) {
     return Response.json(
@@ -75,12 +77,12 @@ export async function POST(request: Request) {
   const body = new URLSearchParams({
     key: config.key,
     nip: config.nip,
-    sku,
     producto: sku,
-    telefono: phone,
     referencia: phone,
     ...(payload.extra || {}),
   });
+
+  if (amount) body.set("monto", amount);
 
   try {
     const endpoint = buildUrl(config.apiUrl, "RequestTXN");
@@ -90,6 +92,7 @@ export async function POST(request: Request) {
       method: "POST",
       sku,
       phoneLength: phone.length,
+      hasAmount: Boolean(amount),
       includesCredentials: true,
       extraKeys: Object.keys(payload.extra || {}),
     });

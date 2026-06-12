@@ -74,8 +74,6 @@ export async function POST(request: Request) {
     key: config.key,
     nip: config.nip,
     transID: transId,
-    TransID: transId,
-    transId,
     ...(payload.extra || {}),
   });
 

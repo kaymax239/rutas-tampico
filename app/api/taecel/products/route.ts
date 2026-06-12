@@ -64,11 +64,15 @@ export async function POST() {
   });
 
   try {
-    const endpoint = buildUrl(config.apiUrl, "Products");
+    const endpoint = buildUrl(config.apiUrl, "getProducts");
 
     console.info("[TAECEL products] request", {
       endpoint,
       method: "POST",
+      body: {
+        key: "[REDACTED]",
+        nip: "[REDACTED]",
+      },
       includesCredentials: true,
     });
 

@@ -8,6 +8,32 @@ type ApiState = {
   data: unknown;
 };
 
+type CertLog = {
+  at: string;
+  action: string;
+  request: unknown;
+  response: unknown;
+};
+
+const PRUEBAS_TAECEL = [
+  { carrier: "Telcel", phone: "5555555505", sku: "TEL010", amount: "10" },
+  { carrier: "Telcel", phone: "5555555510", sku: "TEL050", amount: "50" },
+  { carrier: "Telcel", phone: "5555555515", sku: "TEL100", amount: "100" },
+  { carrier: "Telcel", phone: "5555555520", sku: "TEL150", amount: "150" },
+  { carrier: "Telcel", phone: "5555555525", sku: "TEL200", amount: "200" },
+  { carrier: "Movistar", phone: "5555555530", sku: "MOV010", amount: "10" },
+  { carrier: "Movistar", phone: "5555555540", sku: "MOV050", amount: "50" },
+  { carrier: "Movistar", phone: "5555555560", sku: "MOV100", amount: "100" },
+  { carrier: "Movistar", phone: "5555555565", sku: "MOV120", amount: "120" },
+  { carrier: "Movistar", phone: "5555555200", sku: "MOV150", amount: "150" },
+  { carrier: "Otros", phone: "", sku: "SKY000", amount: "" },
+  { carrier: "Otros", phone: "", sku: "TMX001", amount: "" },
+  { carrier: "Otros", phone: "", sku: "CFE000", amount: "" },
+  { carrier: "Otros", phone: "", sku: "MEG000", amount: "" },
+  { carrier: "Otros", phone: "", sku: "DSH000", amount: "" },
+  { carrier: "Otros", phone: "", sku: "MAX000", amount: "" },
+];
+
 function extraerProductos(data: unknown): Array<Record<string, unknown>> {
   if (Array.isArray(data)) return data as Array<Record<string, unknown>>;
 
@@ -131,11 +157,47 @@ export default function TaecelTestPage() {
   });
   const [sku, setSku] = useState("");
   const [phone, setPhone] = useState("");
+  const [amount, setAmount] = useState("");
   const [transId, setTransId] = useState("");
+  const [certLogs, setCertLogs] = useState<CertLog[]>([]);
   const productos = useMemo(
     () => extraerProductos(productsState.data),
     [productsState.data]
   );
+
+  const registrarLog = (action: string, request: unknown, response: unknown) => {
+    setCertLogs((logs) => [
+      ...logs,
+      {
+        at: new Date().toISOString(),
+        action,
+        request,
+        response,
+      },
+    ]);
+  };
+
+  const usarPrueba = (prueba: (typeof PRUEBAS_TAECEL)[number]) => {
+    setSku(prueba.sku);
+    setPhone(prueba.phone);
+    setAmount(prueba.amount);
+  };
+
+  const exportarLogs = () => {
+    const contenido = certLogs
+      .map((log) => JSON.stringify(log, null, 2))
+      .join("\n\n---\n\n");
+    const blob = new Blob([contenido], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `taecel-certificacion-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const cargarProductos = async () => {
     setProductsState({ loading: true, error: "", data: null });
@@ -147,6 +209,7 @@ export default function TaecelTestPage() {
       });
       const data = await response.json();
 
+      registrarLog("getProducts", { endpoint: "/api/taecel/products" }, data);
       setProductsState({
         loading: false,
         error: response.ok ? "" : "No se pudieron cargar productos.",
@@ -168,13 +231,18 @@ export default function TaecelTestPage() {
       const response = await fetch("/api/taecel/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sku, phone }),
+        body: JSON.stringify({ sku, phone, amount }),
       });
       const data = await response.json();
       const nextTransId = extraerTransId(data);
 
       if (nextTransId) setTransId(nextTransId);
 
+      registrarLog(
+        "RequestTXN",
+        { endpoint: "/api/taecel/request", sku, phone, amount },
+        data
+      );
       setRequestState({
         loading: false,
         error: response.ok ? "" : "RequestTXN no fue exitoso.",
@@ -200,6 +268,11 @@ export default function TaecelTestPage() {
       });
       const data = await response.json();
 
+      registrarLog(
+        "StatusTXN",
+        { endpoint: "/api/taecel/status", transId },
+        data
+      );
       setStatusState({
         loading: false,
         error: response.ok ? "" : "StatusTXN no fue exitoso.",
@@ -238,6 +311,52 @@ export default function TaecelTestPage() {
           <p style={{ color: "#cbd5e1", margin: 0 }}>
             Prueba segura de productos, RequestTXN y StatusTXN sin exponer KEY/NIP.
           </p>
+        </div>
+
+        <div
+          style={{
+            border: "1px solid rgba(148,163,184,.22)",
+            borderRadius: 22,
+            background: "rgba(15,23,42,.72)",
+            padding: 18,
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Tabla de pruebas</h2>
+          <div
+            style={{
+              display: "grid",
+              gap: 8,
+              gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+            }}
+          >
+            {PRUEBAS_TAECEL.map((prueba) => (
+              <button
+                key={`${prueba.carrier}-${prueba.sku}-${prueba.phone || "sin-ref"}`}
+                type="button"
+                onClick={() => usarPrueba(prueba)}
+                style={{
+                  border: "1px solid #334155",
+                  borderRadius: 14,
+                  background: "#020617",
+                  color: "#e2e8f0",
+                  cursor: "pointer",
+                  padding: 12,
+                  textAlign: "left",
+                }}
+              >
+                <strong>{prueba.carrier}</strong>
+                <br />
+                SKU: {prueba.sku}
+                <br />
+                {prueba.phone ? `Tel: ${prueba.phone}` : "Referencia manual"}
+                {prueba.amount && (
+                  <>
+                    <br />${prueba.amount}
+                  </>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div
@@ -312,6 +431,23 @@ export default function TaecelTestPage() {
             />
           </label>
 
+          <label style={{ display: "grid", gap: 6, fontWeight: 800 }}>
+            Monto
+            <input
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="Opcional para productos con monto fijo"
+              inputMode="numeric"
+              style={{
+                border: "1px solid #334155",
+                borderRadius: 12,
+                background: "#020617",
+                color: "white",
+                padding: 12,
+              }}
+            />
+          </label>
+
           <button
             type="button"
             onClick={enviarRequest}
@@ -365,6 +501,24 @@ export default function TaecelTestPage() {
             {statusState.loading ? "Consultando..." : "Consultar StatusTXN"}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={exportarLogs}
+          disabled={certLogs.length === 0}
+          style={{
+            border: 0,
+            borderRadius: 14,
+            background: "#38bdf8",
+            color: "#082f49",
+            cursor: certLogs.length === 0 ? "not-allowed" : "pointer",
+            fontWeight: 900,
+            padding: "12px 14px",
+            opacity: certLogs.length === 0 ? 0.62 : 1,
+          }}
+        >
+          Exportar logs de certificación
+        </button>
 
         {productsState.error && <p style={{ color: "#fca5a5" }}>{productsState.error}</p>}
         {requestState.error && <p style={{ color: "#fca5a5" }}>{requestState.error}</p>}

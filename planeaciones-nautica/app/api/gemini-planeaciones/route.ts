@@ -6,7 +6,7 @@ import Docxtemplater from "docxtemplater";
 
 export const runtime = "nodejs";
 
-const GEMINI_MODEL = "gemini-1.5-pro";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 const PERIODO = "Julio-Diciembre 2026";
 const ESCUELA_NAUTICA =

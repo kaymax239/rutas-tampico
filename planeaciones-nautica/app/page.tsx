@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import { materiasPorSemestre } from "./data/materias";
-import { contenidosMaterias } from "./data/contenidosMaterias";
-import PizZip from "pizzip";
-import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
 
 export default function Home() {
@@ -16,6 +13,8 @@ export default function Home() {
   const [grupo, setGrupo] = useState("");
   const [cadetes, setCadetes] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const periodo = "Julio-Diciembre 2026";
   const escuelaNautica =
@@ -29,90 +28,34 @@ export default function Home() {
   const menu = materiasPorSemestre;
 
   const generarWord = async () => {
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch("/templates/F-32.docx");
-      const content = await response.arrayBuffer();
-
-      const zip = new PizZip(content);
-
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
+      const response = await fetch("/api/gemini-planeaciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          materia: materiaSeleccionada,
+          semestre: semestreSeleccionado,
+          docente,
+          grupo,
+          cadetes,
+          fechaInicio,
+        }),
       });
 
-      const datosMateria: any =
-        contenidosMaterias[
-          materiaSeleccionada as keyof typeof contenidosMaterias
-        ];
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || "Error generando la planeación.");
+        return;
+      }
 
-      const semanas = (datosMateria?.semanas || []).map((s: any) => ({
-        semana: s.semana,
-        tema: s.tema,
-        secuencia:
-          "Inicio: activación de conocimientos previos. Desarrollo: explicación docente, práctica guiada y ejercicios aplicados. Cierre: reflexión y retroalimentación.",
-        recursos:
-          "Computadora, presentación, material didáctico y recursos digitales.",
-        producto: "Actividad, evidencia y participación.",
-        evaluacion: "Lista de cotejo, participación y evaluación formativa.",
-      }));
-
-      doc.render({
-        asignatura: materiaSeleccionada,
-        escuela:"Tampico",
-
-        periodo,
-        escuelaNautica,
-        horasPorSemana,
-        horasTotales,
-        horasTeoricas,
-        horasIndependientes,
-        claveAsignatura: materiaSeleccionada,
-horasPracticas: "0",
-clave: materiaSeleccionada,
-claveAsignaturaCurso: materiaSeleccionada,
-horasSemana: horasPorSemana,
-horasXSemana: horasPorSemana,
-
-        objetivoGeneral:
-          datosMateria?.objetivoEspecifico ||
-          "Objetivo general de la asignatura.",
-
-        unidadBloques: [
-          {
-            unidad: datosMateria?.unidad || "I",
-
-            objetivoEspecifico:
-              datosMateria?.objetivoEspecifico ||
-              "Objetivo específico de la unidad.",
-
-            estrategia:
-              datosMateria?.estrategia ||
-              "Aprendizaje guiado, explicación docente y actividades colaborativas.",
-
-            semanas,
-          },
-        ],
-
-        docente,
-        grupo,
-        grupoAsignatura: grupo,
-        cadetes,
-        fechaInicio,
-        nombreDocente: docente,
-numeroCadetes: cadetes,
-fecha: fechaInicio,
-
-        fuentes: "Bibliografía y materiales de consulta.",
-      });
-
-      const blob = doc.getZip().generate({
-        type: "blob",
-      });
-
-      saveAs(blob, `F32_${materiaSeleccionada || "Planeacion"}.docx`);
-    } catch (error) {
-      console.log(error);
-      alert("Error generando F-32");
+      const blob = await response.blob();
+      saveAs(blob, `F32_${materiaSeleccionada.replaceAll(" ", "-")}.docx`);
+    } catch {
+      setError("Error de red o del servidor. Intenta nuevamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -249,11 +192,16 @@ fecha: fechaInicio,
                   />
                 </div>
 
+                {error && (
+                  <p className="text-red-600 mb-4 text-sm">{error}</p>
+                )}
+
                 <button
                   onClick={generarWord}
-                  className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800"
+                  disabled={loading}
+                  className="bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Generar planeación
+                  {loading ? "Generando con IA..." : "Generar planeación"}
                 </button>
               </>
             ) : (

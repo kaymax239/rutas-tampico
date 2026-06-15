@@ -330,6 +330,7 @@ export default function Home() {
         conteoUsuariosPorRuta={usuariosEnLinea.byRoute}
         onRutaSeleccionada={cambiarRutaActiva}
         onRegresarInicio={volverInicio}
+        onCompartirUbicacion={abrirWhatsAppPasajeroSeguro}
       />
     </div>
   );

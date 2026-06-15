@@ -1,6 +1,13 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import {
   MapContainer,
   TileLayer,
@@ -18,8 +25,11 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  setDoc,
   type Timestamp,
 } from "firebase/firestore";
+import AnimatedNavigationMap from "./AnimatedNavigationMap";
+import RecomendacionesMapaAnimado from "./RecomendacionesMapaAnimado";
 import { db } from "./firebase";
 
 type Bus = {
@@ -43,13 +53,14 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
-type EstiloMapa = "navegacion" | "normal" | "nocturno" | "barrio";
+type EstiloMapa = "nocturno" | "barrio" | "animado";
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
   conteoUsuariosPorRuta?: Record<string, number>;
   onRutaSeleccionada?: (ruta: string | null) => void;
   onRegresarInicio?: () => void;
+  onCompartirUbicacion?: () => void;
 };
 
 type MetodoCalculo = "ruta" | "haversine";
@@ -81,16 +92,6 @@ const MAPAS_DISPONIBLES: Record<
   EstiloMapa,
   { label: string; url: string; attribution: string; premium?: boolean }
 > = {
-  navegacion: {
-    label: "Navegación",
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-  },
-  normal: {
-    label: "Mapa normal",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap &copy; CARTO",
-  },
   nocturno: {
     label: "Mapa nocturno",
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
@@ -101,6 +102,11 @@ const MAPAS_DISPONIBLES: Record<
     label: "Mapa barrio",
     url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
     attribution: "&copy; OpenStreetMap contributors, Tiles style by HOT",
+  },
+  animado: {
+    label: "Mapa animado",
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    attribution: "&copy; OpenStreetMap &copy; CARTO",
   },
 };
 
@@ -887,6 +893,7 @@ export default function Mapa({
   conteoUsuariosPorRuta = {},
   onRutaSeleccionada,
   onRegresarInicio,
+  onCompartirUbicacion,
 }: MapaProps) {
   const [buses, setBuses] = useState<Bus[]>([]);
   const [ubicacion, setUbicacion] = useState<[number, number] | null>(null);
@@ -898,13 +905,28 @@ export default function Mapa({
   const [pantallaFlujo, setPantallaFlujo] = useState<PantallaFlujo>(
     modoUsuario === "chofer" ? "tipos" : "zonas"
   );
-  const [userId, setUserId] = useState<string | null>(null);
-  const [viajeActivo, setViajeActivo] = useState<ViajeActivo | null>(null);
+  const [estadoSesionInicial] = useState(() => {
+    if (typeof window === "undefined") {
+      return { userId: null, viajeActivo: null };
+    }
+
+    return {
+      userId: obtenerOCrearUserId(),
+      viajeActivo: leerViajeActivo(),
+    };
+  });
+  const [userId, setUserId] = useState<string | null>(
+    estadoSesionInicial.userId
+  );
+  const [viajeActivo, setViajeActivo] = useState<ViajeActivo | null>(
+    estadoSesionInicial.viajeActivo
+  );
   const [usuarioKm, setUsuarioKm] = useState<UsuarioKm>(USUARIO_KM_INICIAL);
   const [procesandoViaje, setProcesandoViaje] = useState(false);
+  const seguimientoUbicacionRef = useRef<number | null>(null);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
-  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
+  const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("barrio");
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -939,12 +961,6 @@ export default function Mapa({
   }, []);
 
   useEffect(() => {
-    const id = obtenerOCrearUserId();
-    setUserId(id);
-    setViajeActivo(leerViajeActivo());
-  }, []);
-
-  useEffect(() => {
     if (!userId) return;
 
     const usuarioRef = doc(db, "usuariosKm", userId);
@@ -973,6 +989,14 @@ export default function Mapa({
     return () => unsub();
   }, [userId]);
 
+  useEffect(() => {
+    return () => {
+      if (seguimientoUbicacionRef.current !== null) {
+        navigator.geolocation.clearWatch(seguimientoUbicacionRef.current);
+      }
+    };
+  }, []);
+
   const rutasDeZona = useMemo(() => {
     return rutas.filter((ruta) => {
       if (ruta.zona !== zonaSeleccionada) return false;
@@ -996,18 +1020,26 @@ export default function Mapa({
   const usuariosRutaSeleccionada = rutaSeleccionada
     ? conteoUsuariosPorRuta[rutaSeleccionada] || 0
     : 0;
-  const mapaActual = MAPAS_DISPONIBLES[estiloMapa];
   const kilometrosUsuario = obtenerNumero(usuarioKm.kmTotales);
   const nocturnoDesbloqueado = kilometrosUsuario >= 100;
+  const estiloMapaAplicado =
+    estiloMapa === "nocturno" && !nocturnoDesbloqueado ? "barrio" : estiloMapa;
+  const mapaActual = MAPAS_DISPONIBLES[estiloMapaAplicado];
+  const mapaAnimadoActivo = estiloMapaAplicado === "animado";
+  const rutaNormalizada = rutaSeleccionada.toLowerCase();
+  const rutaConRecomendaciones =
+    mapaAnimadoActivo &&
+    (rutaNormalizada.includes("circuito norte") ||
+      rutaNormalizada.includes("tampico norte"));
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
+  const esZonaNorteSeleccionada =
+    zonaSeleccionada === "Zona Norte / Altamira";
+  const clasePantallaRutas = esZonaNorteSeleccionada
+    ? "rt-route-list-screen rt-route-list-screen--north"
+    : "rt-route-list-screen rt-route-list-screen--tampico";
 
-  useEffect(() => {
-    if (estiloMapa === "nocturno" && !nocturnoDesbloqueado) {
-      setEstiloMapa("navegacion");
-    }
-  }, [estiloMapa, nocturnoDesbloqueado]);
 
   const seleccionarTipoRuta = (tipo: TipoRuta) => {
     setTipoRutaSeleccionado(tipo);
@@ -1048,20 +1080,63 @@ export default function Mapa({
     setPantallaFlujo("zonas");
   };
 
-  const obtenerMiUbicacion = () => {
-    if (!navigator.geolocation) {
-      alert("Tu navegador no permite ubicación.");
-      return;
-    }
+  const registrarUbicacionChofer = (
+    id: string,
+    ruta: string,
+    lat: number,
+    lng: number
+  ) => {
+    void setDoc(
+      doc(db, "autobuses", id),
+      {
+        nombre: ruta,
+        ruta,
+        lat,
+        lng,
+        fecha: serverTimestamp(),
+      },
+      { merge: true }
+    ).catch(() => {
+      console.error("No se pudo actualizar la ubicación del chofer.");
+    });
+  };
 
-    navigator.geolocation.getCurrentPosition(
+  const detenerSeguimientoUbicacion = () => {
+    if (seguimientoUbicacionRef.current === null) return;
+
+    navigator.geolocation.clearWatch(seguimientoUbicacionRef.current);
+    seguimientoUbicacionRef.current = null;
+  };
+
+  const iniciarSeguimientoUbicacion = (id: string, ruta: string) => {
+    if (!navigator.geolocation) return;
+
+    detenerSeguimientoUbicacion();
+    seguimientoUbicacionRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        setUbicacion([lat, lng]);
+
+        if (modoUsuario === "chofer") {
+          registrarUbicacionChofer(id, ruta, lat, lng);
+        }
       },
       () => {
-        alert("No se pudo obtener tu ubicación.");
-      }
+        console.error("No se pudo seguir la ubicación en tiempo real.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
     );
+  };
+
+  const obtenerMiUbicacion = async () => {
+    try {
+      const pos = await obtenerPosicionActual();
+      setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+    } catch {
+      alert("No se pudo obtener tu ubicación.");
+    }
   };
 
   const iniciarViaje = async () => {
@@ -1084,17 +1159,27 @@ export default function Mapa({
 
     try {
       const pos = await obtenerPosicionActual();
+      const id = userId || obtenerOCrearUserId();
+      const latInicio = pos.coords.latitude;
+      const lngInicio = pos.coords.longitude;
       const viaje: ViajeActivo = {
         ruta: rutaSeleccionada,
         horaInicio: new Date().toISOString(),
-        latInicio: pos.coords.latitude,
-        lngInicio: pos.coords.longitude,
+        latInicio,
+        lngInicio,
       };
 
       guardarViajeActivo(viaje);
+      setUserId(id);
       setViajeActivo(viaje);
-      setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+      setUbicacion([latInicio, lngInicio]);
       alert("Viaje iniciado");
+
+      if (modoUsuario === "chofer") {
+        registrarUbicacionChofer(id, rutaSeleccionada, latInicio, lngInicio);
+      }
+
+      iniciarSeguimientoUbicacion(id, rutaSeleccionada);
     } catch {
       alert("No se pudo obtener tu ubicación. Activa el GPS y permite ubicación.");
     } finally {
@@ -1166,6 +1251,7 @@ export default function Mapa({
       });
 
       limpiarViajeActivo();
+      detenerSeguimientoUbicacion();
       setViajeActivo(null);
       setUbicacion([latFin, lngFin]);
       alert(`Viaje finalizado. Sumaste ${kmCalculados.toFixed(2)} km.`);
@@ -1286,6 +1372,7 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Tampico / Madero")}
+          className="rt-zone-button rt-zone-button--tampico"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1297,11 +1384,13 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          📍 Tampico / Madero
+          <span>📍 Tampico / Madero</span>
+          <span aria-hidden="true">🚌</span>
         </button>
 
         <button
           onClick={() => cambiarZona("Zona Norte / Altamira")}
+          className="rt-zone-button rt-zone-button--north"
           style={{
             padding: 22,
             borderRadius: 20,
@@ -1313,7 +1402,8 @@ export default function Mapa({
             cursor: "pointer",
           }}
         >
-          📍 Zona Norte
+          <span>🌴 Zona Norte</span>
+          <span aria-hidden="true">🚙</span>
         </button>
 
         <button
@@ -1338,67 +1428,71 @@ export default function Mapa({
 
   if (pantallaFlujo === "rutas") {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "#0f172a",
-          padding: 24,
-          color: "white",
-        }}
-      >
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-          {obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
-        </h1>
+      <div className={clasePantallaRutas}>
+        <div className="rt-route-list-hero">
+          <span className="rt-route-list-hero__eyebrow">
+            {esZonaNorteSeleccionada
+              ? "Rutas Tampico MAFA"
+              : obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
+          </span>
+          <h1>{obtenerEtiquetaZona(zonaSeleccionada)}</h1>
+          <p>
+            {esZonaNorteSeleccionada
+              ? "Selecciona tu ruta"
+              : "Elige tu ruta con estilo cartoon."}
+          </p>
+        </div>
 
-        <p style={{ color: "#cbd5e1", marginBottom: 20 }}>
-          Zona: {obtenerEtiquetaZona(zonaSeleccionada)}
-        </p>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="rt-route-list-grid">
           {rutasDeZona.length === 0 && (
-            <div
-              style={{
-                border: "1px solid rgba(148,163,184,.35)",
-                borderRadius: 18,
-                color: "#cbd5e1",
-                padding: 18,
-              }}
-            >
+            <div className="rt-route-empty">
               No hay rutas en esta selección.
             </div>
           )}
 
-          {rutasDeZona.map((ruta) => {
+          {rutasDeZona.map((ruta, index) => {
             const usuariosRuta = conteoUsuariosPorRuta[ruta.nombre] || 0;
 
             return (
               <button
                 key={ruta.nombre}
                 onClick={() => seleccionarRuta(ruta.nombre)}
-                style={{
-                  padding: 18,
-                  borderRadius: 18,
-                  border: "none",
-                  background: ruta.color,
-                  color: "white",
-                  fontSize: 18,
-                  fontWeight: 800,
-                  textAlign: "left",
-                  cursor: "pointer",
-                }}
+                className={
+                  esZonaNorteSeleccionada
+                    ? "rt-route-card rt-route-card--north"
+                    : "rt-route-card rt-route-card--tampico"
+                }
+                style={{ "--route-color": ruta.color } as CSSProperties}
               >
-                <span style={{ display: "block" }}>🚍 {ruta.nombre}</span>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    marginTop: 6,
-                    opacity: 0.9,
-                  }}
-                >
-                  👥 {usuariosRuta} usuarios en esta ruta
+                <span className="rt-route-card__badge">
+                  {esZonaNorteSeleccionada
+                    ? `Ruta ${101 + index}`
+                    : String(index + 1).padStart(2, "0")}
                 </span>
+                <span className="rt-route-card__content">
+                  <span className="rt-route-card__name">{ruta.nombre}</span>
+                  <span className="rt-route-card__meta">
+                    <span>{usuariosRuta} usuarios en esta ruta</span>
+                  </span>
+                </span>
+                {esZonaNorteSeleccionada ? (
+                  <span className="rt-route-card__scene" aria-hidden="true">
+                    <span className="rt-route-card__palm">🌴</span>
+                    <span className="rt-route-card__bus">🚙</span>
+                  </span>
+                ) : (
+                  <>
+                    <span className="rt-route-card__scene" aria-hidden="true">
+                      <span className="rt-route-card__sun">☀️</span>
+                      <span className="rt-route-card__bus">🚌</span>
+                    </span>
+                    <span className="rt-route-card__lights" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                  </>
+                )}
               </button>
             );
           })}
@@ -1406,17 +1500,7 @@ export default function Mapa({
 
         <button
           onClick={regresarAZonas}
-          style={{
-            marginTop: 20,
-            padding: 14,
-            borderRadius: 999,
-            border: "none",
-            background: "white",
-            color: "#111827",
-            fontWeight: 800,
-            width: "100%",
-            cursor: "pointer",
-          }}
+          className="rt-route-back"
         >
           ← Regresar
         </button>
@@ -1425,7 +1509,13 @@ export default function Mapa({
   }
 
   return (
-    <div className="rt-map-shell">
+    <div
+      className={
+        mapaAnimadoActivo
+          ? "rt-map-shell rt-map-shell--premium-animated"
+          : "rt-map-shell"
+      }
+    >
       <div className="rt-map-panel">
         <div className="rt-map-panel__main">
           <div
@@ -1511,7 +1601,7 @@ export default function Mapa({
                     setMostrarOpcionesMapa(false);
                   }}
                   className={
-                    estiloMapa === mapa
+                    estiloMapaAplicado === mapa
                       ? "rt-map-style-option rt-map-style-option--active"
                       : "rt-map-style-option"
                   }
@@ -1557,7 +1647,29 @@ export default function Mapa({
         >
           <span>GPS</span>
         </button>
+
+        {onCompartirUbicacion && (
+          <button
+            type="button"
+            onClick={onCompartirUbicacion}
+            className="rt-fab rt-fab--share-location"
+            aria-label="Compartir ubicación"
+          >
+            <span>Compartir ubicación</span>
+          </button>
+        )}
       </div>
+
+      {mapaAnimadoActivo && (
+        <div className="rt-premium-map-animation" aria-hidden="true">
+          <span className="rt-premium-map-animation__grid" />
+          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--one" />
+          <span className="rt-premium-map-animation__pulse rt-premium-map-animation__pulse--two" />
+          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--one" />
+          <span className="rt-premium-map-animation__pin rt-premium-map-animation__pin--two" />
+          <span className="rt-premium-map-animation__car" />
+        </div>
+      )}
 
       <MapContainer
         center={[22.2553, -97.8686]}
@@ -1566,12 +1678,24 @@ export default function Mapa({
         zoomControl={false}
         style={{ width: "100%", height: "100%" }}
       >
-        <AjustarMapa ubicacion={ubicacion} />
+        <AjustarMapa ubicacion={mapaAnimadoActivo ? null : ubicacion} />
 
         <TileLayer
-          key={estiloMapa}
+          key={estiloMapaAplicado}
           attribution={mapaActual.attribution}
           url={mapaActual.url}
+        />
+
+        <AnimatedNavigationMap
+          active={mapaAnimadoActivo}
+          onLocationChange={setUbicacion}
+        />
+
+        <RecomendacionesMapaAnimado
+          active={rutaConRecomendaciones}
+          rutaSeleccionada={rutaSeleccionada}
+          userPosition={ubicacion}
+          buses={busesFiltrados}
         />
 
         {rutasDeZona
@@ -1581,9 +1705,13 @@ export default function Mapa({
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: estiloMapa === "nocturno" ? "#020617" : "#ffffff",
-                  weight: 13,
-                  opacity: estiloMapa === "nocturno" ? 0.8 : 0.92,
+                  color: mapaAnimadoActivo
+                    ? "#020617"
+                    : estiloMapaAplicado === "nocturno"
+                      ? "#020617"
+                      : "#ffffff",
+                  weight: mapaAnimadoActivo ? 15 : 13,
+                  opacity: estiloMapaAplicado === "nocturno" ? 0.8 : 0.92,
                   lineCap: "round",
                   lineJoin: "round",
                 }}
@@ -1591,8 +1719,8 @@ export default function Mapa({
               <Polyline
                 positions={ruta.puntos}
                 pathOptions={{
-                  color: ruta.color,
-                  weight: 7,
+                  color: mapaAnimadoActivo ? "#22d3ee" : ruta.color,
+                  weight: mapaAnimadoActivo ? 8 : 7,
                   opacity: 1,
                   lineCap: "round",
                   lineJoin: "round",

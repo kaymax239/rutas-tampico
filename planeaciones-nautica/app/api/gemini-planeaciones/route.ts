@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import path from "path";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 
 export const runtime = "nodejs";
-
-const GEMINI_MODEL = "gemini-2.0-flash";
 
 const PERIODO = "Julio-Diciembre 2026";
 const ESCUELA_NAUTICA =
@@ -84,14 +83,49 @@ function findFileByClave(dir: string, clave: string): string | null {
   return null;
 }
 
-async function generarPlaneacionGemini(params: {
+function extractTextFromDocx(filePath: string): string {
+  try {
+    const zip = new PizZip(fs.readFileSync(filePath));
+    const xml = zip.files["word/document.xml"]?.asText() ?? "";
+    return xml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 4000);
+  } catch {
+    return "";
+  }
+}
+
+function findHistoricalPlaneaciones(dir: string, max = 2): string[] {
+  const results: string[] = [];
+  if (!fs.existsSync(dir)) return results;
+
+  function scan(current: string) {
+    if (results.length >= max) return;
+    const items = fs.readdirSync(current, { withFileTypes: true });
+    for (const item of items) {
+      if (results.length >= max) break;
+      const fullPath = path.join(current, item.name);
+      if (item.isDirectory()) {
+        scan(fullPath);
+      } else if (
+        item.isFile() &&
+        item.name.toLowerCase().endsWith(".docx") &&
+        !item.name.startsWith("~")
+      ) {
+        results.push(fullPath);
+      }
+    }
+  }
+
+  scan(dir);
+  return results;
+}
+
+async function generarPlaneacionClaude(params: {
   materia: string;
   clave: string;
   semestre: string;
   pdfPath: string | null;
 }): Promise<any> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Falta GEMINI_API_KEY en .env.local");
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
   const prompt = `
 Eres especialista en planeación didáctica de la Universidad Marítima y Portuaria de México.
@@ -107,7 +141,8 @@ REGLAS OBLIGATORIAS:
 1. Los temas deben basarse en el programa oficial adjunto (si está disponible) o en el contenido estándar de la materia para una escuela náutica mexicana.
 2. Distribuye los contenidos en exactamente 18 semanas.
 3. Cada semana debe incluir: tema, secuencia didáctica (Inicio / Desarrollo / Cierre), recursos, producto y evaluación.
-4. La salida debe ser JSON válido, sin markdown, sin texto fuera del JSON.
+4. Imita el estilo y vocabulario de las planeaciones históricas de referencia proporcionadas.
+5. La salida debe ser JSON válido, sin markdown, sin texto fuera del JSON.
 
 ESTRUCTURA JSON EXACTA:
 {
@@ -147,32 +182,61 @@ ESTRUCTURA JSON EXACTA:
 }
 `;
 
-  const parts: any[] = [{ text: prompt }];
+  const content: Anthropic.MessageParam["content"] = [];
 
-  if (params.pdfPath) {
-    const pdfBase64 = fs.readFileSync(params.pdfPath).toString("base64");
-    parts.push({ inline_data: { mime_type: "application/pdf", data: pdfBase64 } });
+  // Contexto de estilo: planeaciones históricas
+  const historicalDir = path.join(
+    process.cwd(),
+    "public",
+    "templates",
+    "biblioteca",
+    "planeaciones-historicas"
+  );
+  const historicalFiles = findHistoricalPlaneaciones(historicalDir, 2);
+  if (historicalFiles.length > 0) {
+    const textos = historicalFiles
+      .map((f) => extractTextFromDocx(f))
+      .filter((t) => t.length > 100)
+      .join("\n\n---\n\n");
+
+    if (textos.length > 0) {
+      content.push({
+        type: "text",
+        text: `PLANEACIONES HISTÓRICAS DE REFERENCIA (aprende el estilo, vocabulario y formato de Inicio/Desarrollo/Cierre):\n\n${textos}`,
+      });
+    }
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: { temperature: 0.2, responseMimeType: "application/json" },
-      }),
-    }
-  );
+  // PDF del programa oficial
+  if (params.pdfPath) {
+    const pdfBase64 = fs.readFileSync(params.pdfPath).toString("base64");
+    content.push({
+      type: "document",
+      source: {
+        type: "base64",
+        media_type: "application/pdf",
+        data: pdfBase64,
+      },
+    } as any);
+  }
 
-  const data = await response.json();
-  if (!response.ok) throw new Error(JSON.stringify(data));
+  // Prompt principal
+  content.push({ type: "text", text: prompt });
 
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini no devolvió texto.");
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 8192,
+    messages: [{ role: "user", content }],
+  });
 
-  return JSON.parse(text);
+  const block = response.content[0];
+  if (block.type !== "text" || !block.text) {
+    throw new Error("Claude no devolvió texto.");
+  }
+
+  const jsonMatch = block.text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Claude no devolvió JSON válido.");
+  return JSON.parse(jsonMatch[0]);
 }
 
 export async function POST(req: NextRequest) {
@@ -201,7 +265,7 @@ export async function POST(req: NextRequest) {
 
     const pdfPath = findFileByClave(programasDir, clave);
 
-    const planeacion = await generarPlaneacionGemini({
+    const planeacion = await generarPlaneacionClaude({
       materia,
       clave,
       semestre: semestre ?? "I SEMESTRE",

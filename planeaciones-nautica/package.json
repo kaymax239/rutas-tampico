@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "docx": "^9.7.1",
     "docxtemplater": "^3.68.7",
     "file-saver": "^2.0.5",

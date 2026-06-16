@@ -10,6 +10,37 @@ const Mapa = dynamic(() => import("./Mapa"), {
   ssr: false,
 });
 
+type ClimaTampico = {
+  temperatura: number;
+  sensacion: number;
+  codigo: number;
+};
+
+function obtenerDescripcionClima(codigo: number) {
+  if (codigo === 0) return "Cielo despejado";
+  if ([1, 2, 3].includes(codigo)) return "Parcialmente nublado";
+  if ([45, 48].includes(codigo)) return "Neblina";
+  if ([51, 53, 55, 56, 57].includes(codigo)) return "Llovizna";
+  if ([61, 63, 65, 66, 67].includes(codigo)) return "Lluvia";
+  if ([71, 73, 75, 77].includes(codigo)) return "Nieve";
+  if ([80, 81, 82].includes(codigo)) return "Chubascos";
+  if ([95, 96, 99].includes(codigo)) return "Tormenta";
+
+  return "Clima disponible";
+}
+
+function obtenerIconoClima(codigo: number) {
+  if (codigo === 0) return "☀️";
+  if ([1, 2, 3].includes(codigo)) return "⛅";
+  if ([45, 48].includes(codigo)) return "🌫️";
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(codigo)) {
+    return "🌧️";
+  }
+  if ([95, 96, 99].includes(codigo)) return "⛈️";
+
+  return "🌤️";
+}
+
 export default function Home() {
   const [modo, setModo] = useState<"inicio" | "chofer" | "pasajero">("inicio");
   const [rutaActiva, setRutaActiva] = useState<string | null>(null);
@@ -18,6 +49,10 @@ export default function Home() {
   const [zonaSugerida, setZonaSugerida] = useState("");
   const [comentarioSugerido, setComentarioSugerido] = useState("");
   const [enviandoSugerencia, setEnviandoSugerencia] = useState(false);
+  const [mostrarClimaPatrocinado, setMostrarClimaPatrocinado] = useState(false);
+  const [cargandoClima, setCargandoClima] = useState(false);
+  const [climaTampico, setClimaTampico] = useState<ClimaTampico | null>(null);
+  const [errorClima, setErrorClima] = useState("");
   const usuariosEnLinea = useOnlineUsers();
 
   useUserPresence(modo === "inicio" ? null : rutaActiva);
@@ -29,6 +64,36 @@ export default function Home() {
   const volverInicio = () => {
     setRutaActiva(null);
     setModo("inicio");
+  };
+
+  const abrirClimaPatrocinado = async () => {
+    setMostrarClimaPatrocinado(true);
+    setErrorClima("");
+
+    if (climaTampico) return;
+
+    setCargandoClima(true);
+
+    try {
+      const respuesta = await fetch(
+        "https://api.open-meteo.com/v1/forecast?latitude=22.2553&longitude=-97.8686&current=temperature_2m,apparent_temperature,weather_code&timezone=America%2FMonterrey"
+      );
+
+      if (!respuesta.ok) throw new Error("No se pudo obtener el clima");
+
+      const data = await respuesta.json();
+      const current = data.current;
+
+      setClimaTampico({
+        temperatura: Math.round(Number(current.temperature_2m)),
+        sensacion: Math.round(Number(current.apparent_temperature)),
+        codigo: Number(current.weather_code),
+      });
+    } catch {
+      setErrorClima("No se pudo cargar el clima en este momento.");
+    } finally {
+      setCargandoClima(false);
+    }
   };
 
   const abrirWhatsAppPasajeroSeguro = () => {
@@ -141,6 +206,63 @@ export default function Home() {
             👥 Usuarios en línea:{" "}
             {usuariosEnLinea.loading ? "..." : usuariosEnLinea.total}
           </div>
+
+          <button
+            onClick={abrirClimaPatrocinado}
+            style={{
+              width: "100%",
+              background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+              color: "white",
+              border: "1px solid rgba(191,219,254,.45)",
+              padding: 16,
+              borderRadius: 18,
+              fontSize: 17,
+              fontWeight: 900,
+              cursor: "pointer",
+              boxShadow: "0 12px 28px rgba(37,99,235,.28)",
+            }}
+          >
+            🌤️ Tampico al minuto
+            <span
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 700,
+                marginTop: 4,
+                opacity: 0.9,
+              }}
+            >
+              Ventana patrocinada gratis
+            </span>
+          </button>
+
+          <button
+            onClick={abrirClimaPatrocinado}
+            style={{
+              width: "100%",
+              background: "rgba(15,23,42,.96)",
+              color: "#e0f2fe",
+              border: "1px solid rgba(56,189,248,.45)",
+              padding: 14,
+              borderRadius: 18,
+              fontSize: 16,
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            👀 ¿Quieres seguirlo?
+            <span
+              style={{
+                display: "block",
+                fontSize: 12,
+                fontWeight: 700,
+                marginTop: 4,
+                color: "#93c5fd",
+              }}
+            >
+              Abre el clima antes de viajar
+            </span>
+          </button>
 
           <button
             onClick={() => setModo("chofer")}
@@ -319,6 +441,121 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {mostrarClimaPatrocinado && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(2,6,23,.78)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 20,
+              zIndex: 50,
+            }}
+          >
+            <div
+              style={{
+                width: "100%",
+                maxWidth: 380,
+                borderRadius: 28,
+                background: "linear-gradient(180deg, #111827, #020617)",
+                border: "1px solid rgba(125,211,252,.35)",
+                color: "white",
+                padding: 24,
+                boxShadow: "0 24px 70px rgba(0,0,0,.55)",
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: 44, marginBottom: 8 }}>
+                {climaTampico ? obtenerIconoClima(climaTampico.codigo) : "🌤️"}
+              </div>
+
+              <h2 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 6px" }}>
+                Tampico al minuto
+              </h2>
+
+              <p style={{ color: "#93c5fd", margin: "0 0 18px", fontWeight: 800 }}>
+                Patrocinado gratis por Rutas Kaymax
+              </p>
+
+              {cargandoClima && (
+                <p style={{ color: "#cbd5e1", fontWeight: 800 }}>Cargando clima...</p>
+              )}
+
+              {errorClima && (
+                <p style={{ color: "#fecaca", fontWeight: 800 }}>{errorClima}</p>
+              )}
+
+              {climaTampico && (
+                <div
+                  style={{
+                    background: "rgba(15,23,42,.86)",
+                    border: "1px solid rgba(148,163,184,.28)",
+                    borderRadius: 22,
+                    padding: 18,
+                    marginBottom: 18,
+                  }}
+                >
+                  <div style={{ fontSize: 52, fontWeight: 900 }}>
+                    {climaTampico.temperatura}°C
+                  </div>
+                  <div style={{ color: "#bae6fd", fontWeight: 900, marginTop: 4 }}>
+                    {obtenerDescripcionClima(climaTampico.codigo)}
+                  </div>
+                  <div style={{ color: "#cbd5e1", fontWeight: 800, marginTop: 8 }}>
+                    Sensación: {climaTampico.sensacion}°C
+                  </div>
+                </div>
+              )}
+
+              <p style={{ color: "#e5e7eb", fontWeight: 800, marginBottom: 16 }}>
+                ¿Quieres seguirlo y abrir Rutas Tampico?
+              </p>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => setMostrarClimaPatrocinado(false)}
+                  style={{
+                    flex: 1,
+                    padding: 14,
+                    borderRadius: 16,
+                    border: "1px solid rgba(148,163,184,.35)",
+                    background: "transparent",
+                    color: "#cbd5e1",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cerrar
+                </button>
+
+                <button
+                  onClick={() => {
+                    setMostrarClimaPatrocinado(false);
+                    setModo("pasajero");
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: 14,
+                    borderRadius: 16,
+                    border: "none",
+                    background: "#2563eb",
+                    color: "white",
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  Seguir
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     );
   }

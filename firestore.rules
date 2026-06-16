@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function str(v, max)    { return v is string && v.size() <= max; }
+    function strOpt(v, max) { return v == null || (v is string && v.size() <= max); }
+    function num(v, lo, hi) { return v is number && v >= lo && v <= hi; }
+
+    // 1) Presencia / contador de usuarios en línea
+    match /usuariosEnLinea/{sessionId} {
+      allow read: if true;                       // el contador lee la colección
+      allow create, update: if
+        request.resource.data.keys().hasOnly(['online','route','lastSeen','updatedAt','userAgent'])
+        && request.resource.data.online is bool
+        && strOpt(request.resource.data.route, 80)
+        && request.resource.data.lastSeen is timestamp
+        && strOpt(request.resource.data.userAgent, 200);
+      allow delete: if true;                     // la app borra su doc al salir
+    }
+
+    // 2) Kilometraje por usuario
+    match /usuariosKm/{userId} {
+      allow read: if true;
+      allow create, update: if
+        request.resource.data.keys().hasOnly(['userId','kmTotales','viajesTotales','nivel','ultimoViaje','fechaActualizacion'])
+        && str(request.resource.data.userId, 100)
+        && num(request.resource.data.kmTotales, 0, 1000000)
+        && num(request.resource.data.viajesTotales, 0, 1000000)
+        && str(request.resource.data.nivel, 60)
+        && strOpt(request.resource.data.ultimoViaje, 40);
+      allow delete: if false;
+    }
+
+    // 3) Sugerencias (solo crear, no se leen desde la app)
+    match /sugerencias/{id} {
+      allow read: if false;
+      allow create: if
+        request.resource.data.keys().hasOnly(['ruta','zona','comentario','fecha'])
+        && str(request.resource.data.ruta, 120)
+        && strOpt(request.resource.data.zona, 80)
+        && strOpt(request.resource.data.comentario, 500);
+      allow update, delete: if false;
+    }
+
+    // 4) Autobuses (pasajero lee; chofer escribe posición cuando se conecte)
+    match /autobuses/{busId} {
+      allow read: if true;
+      allow create, update: if
+        request.resource.data.keys().hasOnly(['nombre','ruta','lat','lng','fecha'])
+        && strOpt(request.resource.data.nombre, 80)
+        && strOpt(request.resource.data.ruta, 120)
+        && num(request.resource.data.lat, -90, 90)
+        && num(request.resource.data.lng, -180, 180);
+      allow delete: if false;
+    }
+
+    // 5) Viajes (solo crear)
+    match /viajesUsuarios/{id} {
+      allow read: if false;
+      allow create: if
+        str(request.resource.data.userId, 100)
+        && str(request.resource.data.ruta, 120)
+        && num(request.resource.data.kmCalculados, 0, 100000);
+      allow update, delete: if false;
+    }
+
+    // Negar TODO lo demás (cualquier otra colección)
+    match /{document=**} { allow read, write: if false; }
+  }
+}

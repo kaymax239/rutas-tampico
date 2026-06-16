@@ -324,7 +324,7 @@ export async function POST(req: NextRequest) {
     const buffer = doc.getZip().generate({ type: "nodebuffer" });
     const fileName = `F32_${materia.replaceAll(" ", "-")}.docx`;
 
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type":

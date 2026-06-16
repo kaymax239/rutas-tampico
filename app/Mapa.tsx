@@ -12,6 +12,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 import {
+  addDoc,
   collection,
   doc,
   onSnapshot,
@@ -111,6 +112,7 @@ const LUGARES_RADIO_M = 300;
 const LUGARES_MAXIMOS = 10;
 const LUGARES_INTERVALO_MS = 30_000;
 const LUGARES_MOVIMIENTO_MINIMO_M = 80;
+const CLICK_NEGOCIO_COOLDOWN_MS = 5_000;
 const CATEGORIAS_LUGARES: CategoriaBusquedaLugar[] = [
   { categoria: "restaurant", googleType: "restaurant" },
   { categoria: "fast_food", googleType: "restaurant", keyword: "fast food" },
@@ -1319,6 +1321,7 @@ export default function Mapa({
     ubicacion: [number, number] | null;
     timestamp: number;
   }>({ ubicacion: null, timestamp: 0 });
+  const clicksNegociosRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1573,6 +1576,43 @@ export default function Mapa({
     if (!rutaMapaSeleccionada) return;
 
     setCentrarRutaSolicitud((valor) => valor + 1);
+  };
+
+  const registrarClickNegocio = async (
+    lugar: LugarCercano,
+    origen: "tarjeta" | "marcador" | "popup"
+  ) => {
+    const ahora = Date.now();
+    const ultimoClick = clicksNegociosRef.current[lugar.id] || 0;
+
+    if (ahora - ultimoClick < CLICK_NEGOCIO_COOLDOWN_MS) return;
+
+    clicksNegociosRef.current[lugar.id] = ahora;
+
+    try {
+      const id = userId || obtenerOCrearUserId();
+      setUserId(id);
+
+      await addDoc(collection(db, "clicksNegocios"), {
+        placeId: lugar.id,
+        nombre: lugar.nombre,
+        categoria: lugar.categoria,
+        ruta: rutaSeleccionada || null,
+        zona: zonaSeleccionada,
+        distanciaMetros: lugar.distanciaMetros,
+        rating: typeof lugar.rating === "number" ? lugar.rating : null,
+        latNegocio: lugar.lat,
+        lngNegocio: lugar.lng,
+        latUsuario: ubicacion?.[0] ?? null,
+        lngUsuario: ubicacion?.[1] ?? null,
+        origen,
+        userId: id,
+        userAgent: navigator.userAgent.slice(0, 200),
+        fecha: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("No se pudo registrar el click del negocio", error);
+    }
   };
 
   const iniciarViaje = async () => {
@@ -2100,7 +2140,19 @@ export default function Mapa({
               <span className="rt-nearby-card__eyebrow">Cerca de ti</span>
               <div className="rt-nearby-card__list">
                 {lugaresCercanosVisibles.map((lugar) => (
-                  <div key={lugar.id} className="rt-nearby-card__item">
+                  <div
+                    key={lugar.id}
+                    className="rt-nearby-card__item"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => void registrarClickNegocio(lugar, "tarjeta")}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        void registrarClickNegocio(lugar, "tarjeta");
+                      }
+                    }}
+                  >
                     <strong>
                       {lugar.nombre} – a {lugar.distanciaMetros} m
                     </strong>
@@ -2150,6 +2202,9 @@ export default function Mapa({
               key={lugar.id}
               position={[lugar.lat, lugar.lng]}
               icon={crearLugarIcon(lugar.categoria)}
+              eventHandlers={{
+                click: () => void registrarClickNegocio(lugar, "marcador"),
+              }}
             >
               <Popup>
                 <b>{lugar.nombre}</b>
@@ -2163,6 +2218,14 @@ export default function Mapa({
                     Rating: {lugar.rating.toFixed(1)}
                   </>
                 )}
+                <br />
+                <button
+                  type="button"
+                  className="rt-place-popup-button"
+                  onClick={() => void registrarClickNegocio(lugar, "popup")}
+                >
+                  Me interesa
+                </button>
               </Popup>
             </Marker>
           ))}
@@ -2181,6 +2244,14 @@ export default function Mapa({
               <br />a {lugar.distanciaMetros} m
               <br />
               {ETIQUETAS_LUGARES[lugar.categoria]}
+              <br />
+              <button
+                type="button"
+                className="rt-place-popup-button"
+                onClick={() => void registrarClickNegocio(lugar, "popup")}
+              >
+                Me interesa
+              </button>
             </Popup>
           ))}
 

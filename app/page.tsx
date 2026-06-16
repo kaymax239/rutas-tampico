@@ -13,8 +13,29 @@ const Mapa = dynamic(() => import("./Mapa"), {
 const TAM_PROMO_STORAGE_KEY = "rutasKaymax.tampicoAlMinutoPromoClosedAt";
 const TAM_PROMO_HIDE_MS = 24 * 60 * 60 * 1000;
 const TAM_FACEBOOK_URL = "https://www.facebook.com/TampicoAlMinuto";
+const TAMPICO_WEATHER_URL =
+  "https://www.google.com/search?q=clima+Tampico+hoy";
 const MAX_PROMO_STORAGE_KEY = "rutasKaymax.maxCleanersPromoClosedAt";
 const MAX_CLEANERS_PHONE = "8331063633";
+
+type ClimaTampico = {
+  temperatura: number;
+  sensacion: number;
+  humedad: number;
+  viento: number;
+  descripcion: string;
+};
+
+function describirClima(codigo: number) {
+  if (codigo === 0) return "Despejado";
+  if ([1, 2, 3].includes(codigo)) return "Parcialmente nublado";
+  if ([45, 48].includes(codigo)) return "Neblina";
+  if ([51, 53, 55, 56, 57].includes(codigo)) return "Llovizna";
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(codigo)) return "Lluvia";
+  if ([95, 96, 99].includes(codigo)) return "Tormenta";
+
+  return "Clima variable";
+}
 
 export default function Home() {
   const [modo, setModo] = useState<"inicio" | "chofer" | "pasajero">("inicio");
@@ -26,6 +47,10 @@ export default function Home() {
   const [enviandoSugerencia, setEnviandoSugerencia] = useState(false);
   const [mostrarPromoTam, setMostrarPromoTam] = useState(false);
   const [mostrarPromoMax, setMostrarPromoMax] = useState(false);
+  const [climaTampico, setClimaTampico] = useState<ClimaTampico | null>(null);
+  const [cargandoClimaTam, setCargandoClimaTam] = useState(false);
+  const [mostrarClimaTam, setMostrarClimaTam] = useState(false);
+  const [clicksTamSesion, setClicksTamSesion] = useState(0);
   const usuariosEnLinea = useOnlineUsers();
 
   useUserPresence(modo === "inicio" ? null : rutaActiva);
@@ -51,6 +76,46 @@ export default function Home() {
   const volverInicio = () => {
     setRutaActiva(null);
     setModo("inicio");
+  };
+
+  const registrarClickAnuncio = async (anuncio: string, accion: string) => {
+    try {
+      await addDoc(collection(db, "clicksAnuncios"), {
+        anuncio,
+        accion,
+        pagina: "inicio",
+        fecha: serverTimestamp(),
+        userAgent: navigator.userAgent.slice(0, 200),
+      });
+    } catch (error) {
+      console.error("No se pudo registrar click del anuncio", error);
+    }
+  };
+
+  const cargarClimaTampico = async () => {
+    setCargandoClimaTam(true);
+
+    try {
+      const response = await fetch(
+        "https://api.open-meteo.com/v1/forecast?latitude=22.2553&longitude=-97.8686&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=America%2FMexico_City",
+        { cache: "no-store" }
+      );
+      const data = await response.json();
+      const current = data?.current || {};
+
+      setClimaTampico({
+        temperatura: Math.round(Number(current.temperature_2m) || 0),
+        sensacion: Math.round(Number(current.apparent_temperature) || 0),
+        humedad: Math.round(Number(current.relative_humidity_2m) || 0),
+        viento: Math.round(Number(current.wind_speed_10m) || 0),
+        descripcion: describirClima(Number(current.weather_code) || 0),
+      });
+    } catch (error) {
+      console.error("No se pudo cargar clima de Tampico", error);
+      setClimaTampico(null);
+    } finally {
+      setCargandoClimaTam(false);
+    }
   };
 
   const abrirWhatsAppPasajeroSeguro = () => {
@@ -90,8 +155,26 @@ export default function Home() {
     setMostrarPromoTam(false);
   };
 
+  const verClimaTampicoAlMinuto = async () => {
+    setClicksTamSesion((valor) => valor + 1);
+    setMostrarClimaTam(true);
+    void registrarClickAnuncio("Tampico al Minuto", "ver_clima");
+
+    if (!climaTampico) {
+      await cargarClimaTampico();
+    }
+  };
+
   const seguirTampicoAlMinuto = () => {
+    setClicksTamSesion((valor) => valor + 1);
+    void registrarClickAnuncio("Tampico al Minuto", "seguir_facebook");
     window.open(TAM_FACEBOOK_URL, "_blank", "noopener,noreferrer");
+  };
+
+  const verClimaEnGoogle = () => {
+    setClicksTamSesion((valor) => valor + 1);
+    void registrarClickAnuncio("Tampico al Minuto", "ver_google_clima");
+    window.open(TAMPICO_WEATHER_URL, "_blank", "noopener,noreferrer");
   };
 
   const cerrarPromoMax = () => {
@@ -100,10 +183,12 @@ export default function Home() {
   };
 
   const llamarMaxCleaners = () => {
+    void registrarClickAnuncio("MAX CLEANERS", "llamar");
     window.location.href = `tel:${MAX_CLEANERS_PHONE}`;
   };
 
   const mostrarInfoMaxCleaners = () => {
+    void registrarClickAnuncio("MAX CLEANERS", "mas_informacion");
     alert(
       "MAX CLEANERS\nLavandería y Planchaduría\nTel. 833-106-36-33"
     );
@@ -427,7 +512,7 @@ export default function Home() {
                   Tampico al Minuto
                 </strong>
                 <span style={{ color: "#0369a1", fontSize: 10, fontWeight: 800 }}>
-                  Información local
+                  Información local · patrocinado
                 </span>
               </div>
 
@@ -465,8 +550,68 @@ export default function Home() {
                   margin: "0 0 10px",
                 }}
               >
-                Noticias, tráfico y eventos de la zona sur de Tamaulipas.
+                Noticias, tráfico, eventos y clima de hoy en la zona sur.
               </p>
+
+              <button
+                type="button"
+                onClick={verClimaTampicoAlMinuto}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  borderRadius: 13,
+                  background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 950,
+                  padding: "10px 9px",
+                  boxShadow: "0 12px 24px rgba(37,99,235,.22)",
+                  marginBottom: 8,
+                }}
+              >
+                🌤️ Ver clima de hoy
+              </button>
+
+              {mostrarClimaTam && (
+                <div
+                  style={{
+                    border: "1px solid #bae6fd",
+                    borderRadius: 14,
+                    background: "#f0f9ff",
+                    color: "#0f172a",
+                    padding: 10,
+                    marginBottom: 9,
+                    textAlign: "left",
+                  }}
+                >
+                  <strong style={{ display: "block", fontSize: 13 }}>
+                    Tampico hoy
+                  </strong>
+                  {cargandoClimaTam ? (
+                    <small style={{ color: "#0369a1", fontWeight: 800 }}>
+                      Cargando clima...
+                    </small>
+                  ) : climaTampico ? (
+                    <>
+                      <div style={{ fontSize: 24, fontWeight: 1000 }}>
+                        {climaTampico.temperatura}°C
+                      </div>
+                      <small style={{ color: "#0369a1", fontWeight: 850 }}>
+                        {climaTampico.descripcion} · sensación {climaTampico.sensacion}°C
+                        <br />
+                        Humedad {climaTampico.humedad}% · viento {climaTampico.viento} km/h
+                        <br />
+                        Clics anuncio: {clicksTamSesion}
+                      </small>
+                    </>
+                  ) : (
+                    <small style={{ color: "#b91c1c", fontWeight: 800 }}>
+                      No se pudo cargar el clima.
+                    </small>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: 7 }}>
                 <button
@@ -490,7 +635,7 @@ export default function Home() {
 
                 <button
                   type="button"
-                  onClick={cerrarPromoTam}
+                  onClick={verClimaEnGoogle}
                   style={{
                     flex: 1,
                     border: "1px solid #e2e8f0",
@@ -503,7 +648,7 @@ export default function Home() {
                     padding: "8px 9px",
                   }}
                 >
-                  Ahora no
+                  Google
                 </button>
               </div>
             </div>

@@ -92,6 +92,10 @@ type LugarCercano = {
   lng: number;
   distanciaMetros: number;
   rating?: number;
+  direccion?: string;
+  googleMapsUri?: string;
+  telefono?: string;
+  websiteUri?: string;
 };
 
 const USER_ID_STORAGE_KEY = "rutasKaymax.userId";
@@ -347,6 +351,17 @@ function obtenerIconoLugar(categoria: CategoriaLugar) {
   return "•";
 }
 
+function crearDescripcionLugar(lugar: LugarCercano) {
+  const etiqueta = ETIQUETAS_LUGARES[lugar.categoria].toLowerCase();
+  const distancia = `${lugar.distanciaMetros} m`;
+  const rating =
+    typeof lugar.rating === "number"
+      ? ` Tiene calificación de ${lugar.rating.toFixed(1)} estrellas en Google.`
+      : "";
+
+  return `${lugar.nombre} es un ${etiqueta} ubicado a ${distancia} de tu ubicación actual.${rating}`;
+}
+
 function crearLugarIcon(categoria: CategoriaLugar) {
   return new L.DivIcon({
     html: `
@@ -547,6 +562,17 @@ function normalizarPlaceCercano(
     lng,
     distanciaMetros: Math.round(distancia),
     rating: typeof place.rating === "number" ? Number(place.rating) : undefined,
+    direccion:
+      typeof place.formattedAddress === "string"
+        ? place.formattedAddress
+        : undefined,
+    googleMapsUri:
+      typeof place.googleMapsURI === "string" ? place.googleMapsURI : undefined,
+    telefono:
+      typeof place.nationalPhoneNumber === "string"
+        ? place.nationalPhoneNumber
+        : undefined,
+    websiteUri: typeof place.websiteURI === "string" ? place.websiteURI : undefined,
   };
 }
 
@@ -567,7 +593,16 @@ async function buscarCategoriaLugarNuevaApi(
 
   try {
     const response = await runtime.Place.searchNearby({
-      fields: ["id", "displayName", "location", "rating"],
+      fields: [
+        "id",
+        "displayName",
+        "location",
+        "rating",
+        "formattedAddress",
+        "googleMapsURI",
+        "nationalPhoneNumber",
+        "websiteURI",
+      ],
       includedPrimaryTypes: [googleType],
       locationRestriction: {
         center: { lat: ubicacion[0], lng: ubicacion[1] },
@@ -1322,6 +1357,11 @@ export default function Mapa({
     timestamp: number;
   }>({ ubicacion: null, timestamp: 0 });
   const clicksNegociosRef = useRef<Record<string, number>>({});
+  const [negocioSeleccionado, setNegocioSeleccionado] =
+    useState<LugarCercano | null>(null);
+  const [conteoClicksNegocio, setConteoClicksNegocio] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1395,6 +1435,7 @@ export default function Mapa({
       setLugaresCercanos([]);
       setMensajeLugares("");
       setCargandoLugares(false);
+      setNegocioSeleccionado(null);
       ultimaBusquedaLugares.current = { ubicacion: null, timestamp: 0 };
       return;
     }
@@ -1582,6 +1623,12 @@ export default function Mapa({
     lugar: LugarCercano,
     origen: "tarjeta" | "marcador" | "popup"
   ) => {
+    setNegocioSeleccionado(lugar);
+    setConteoClicksNegocio((actual) => ({
+      ...actual,
+      [lugar.id]: (actual[lugar.id] || 0) + 1,
+    }));
+
     const ahora = Date.now();
     const ultimoClick = clicksNegociosRef.current[lugar.id] || 0;
 
@@ -2161,6 +2208,7 @@ export default function Mapa({
                       {typeof lugar.rating === "number"
                         ? ` · ⭐ ${lugar.rating.toFixed(1)}`
                         : ""}
+                      {" · Toca para ver detalles"}
                     </small>
                   </div>
                 ))}
@@ -2169,6 +2217,145 @@ export default function Mapa({
           ) : (
             <span>{mensajeLugares}</span>
           )}
+        </div>
+      )}
+
+      {negocioSeleccionado && (
+        <div
+          style={{
+            position: "absolute",
+            left: 16,
+            right: 16,
+            bottom: "calc(240px + env(safe-area-inset-bottom))",
+            zIndex: 100000,
+            border: "1px solid rgba(125, 211, 252, 0.32)",
+            borderRadius: 24,
+            background: "linear-gradient(135deg, rgba(15,23,42,.97), rgba(30,41,59,.94))",
+            color: "white",
+            boxShadow: "0 22px 58px rgba(0,0,0,.45)",
+            padding: 16,
+            maxWidth: 430,
+            margin: "0 auto",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setNegocioSeleccionado(null)}
+            aria-label="Cerrar detalle del negocio"
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 12,
+              width: 34,
+              height: 34,
+              border: "0",
+              borderRadius: 999,
+              background: "rgba(255,255,255,.12)",
+              color: "white",
+              fontSize: 24,
+              fontWeight: 900,
+              cursor: "pointer",
+            }}
+          >
+            ×
+          </button>
+
+          <span
+            style={{
+              color: "#5eead4",
+              display: "block",
+              fontSize: 12,
+              fontWeight: 900,
+              letterSpacing: ".12em",
+              textTransform: "uppercase",
+            }}
+          >
+            {ETIQUETAS_LUGARES[negocioSeleccionado.categoria]}
+          </span>
+          <h2 style={{ fontSize: 22, margin: "6px 42px 8px 0", fontWeight: 1000 }}>
+            {negocioSeleccionado.nombre}
+          </h2>
+
+          <p style={{ color: "#dbeafe", fontSize: 14, lineHeight: 1.4, margin: "0 0 12px" }}>
+            {crearDescripcionLugar(negocioSeleccionado)}
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr",
+              gap: 6,
+              color: "#e0f2fe",
+              fontSize: 13,
+              fontWeight: 800,
+              marginBottom: 10,
+            }}
+          >
+            <span>📍 {negocioSeleccionado.distanciaMetros} m de ti</span>
+            {typeof negocioSeleccionado.rating === "number" && (
+              <span>⭐ {negocioSeleccionado.rating.toFixed(1)} en Google</span>
+            )}
+            <span>
+              👆 {conteoClicksNegocio[negocioSeleccionado.id] || 0} clics en esta sesión
+            </span>
+          </div>
+
+          {negocioSeleccionado.direccion && (
+            <small
+              style={{
+                display: "block",
+                color: "#cbd5e1",
+                fontSize: 12,
+                lineHeight: 1.35,
+                marginBottom: 12,
+              }}
+            >
+              {negocioSeleccionado.direccion}
+            </small>
+          )}
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {negocioSeleccionado.googleMapsUri && (
+              <a
+                href={negocioSeleccionado.googleMapsUri}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() =>
+                  void registrarClickNegocio(negocioSeleccionado, "popup")
+                }
+                style={{
+                  borderRadius: 999,
+                  background: "#2563eb",
+                  color: "white",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  padding: "10px 14px",
+                  textDecoration: "none",
+                }}
+              >
+                Ver en Google Maps
+              </a>
+            )}
+
+            <button
+              type="button"
+              onClick={() =>
+                void registrarClickNegocio(negocioSeleccionado, "popup")
+              }
+              style={{
+                border: "0",
+                borderRadius: 999,
+                background: "#16a34a",
+                color: "white",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 900,
+                padding: "10px 14px",
+              }}
+            >
+              Contar clic
+            </button>
+          </div>
         </div>
       )}
 
@@ -2221,10 +2408,19 @@ export default function Mapa({
                 <br />
                 <button
                   type="button"
-                  className="rt-place-popup-button"
                   onClick={() => void registrarClickNegocio(lugar, "popup")}
+                  style={{
+                    marginTop: 8,
+                    border: "0",
+                    borderRadius: 999,
+                    background: "#2563eb",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    padding: "7px 10px",
+                  }}
                 >
-                  Me interesa
+                  Ver detalle
                 </button>
               </Popup>
             </Marker>
@@ -2247,10 +2443,19 @@ export default function Mapa({
               <br />
               <button
                 type="button"
-                className="rt-place-popup-button"
                 onClick={() => void registrarClickNegocio(lugar, "popup")}
+                style={{
+                  marginTop: 8,
+                  border: "0",
+                  borderRadius: 999,
+                  background: "#2563eb",
+                  color: "white",
+                  cursor: "pointer",
+                  fontWeight: 800,
+                  padding: "7px 10px",
+                }}
               >
-                Me interesa
+                Ver detalle
               </button>
             </Popup>
           ))}

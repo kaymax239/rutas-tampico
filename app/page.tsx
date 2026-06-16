@@ -48,6 +48,10 @@ export default function Home() {
   const cambiarRutaActiva = useCallback((ruta: string | null) => setRutaActiva(ruta), []);
   const volverInicio = () => { setRutaActiva(null); setModo("inicio"); };
 
+  const abrirMaxCleanersGoogle = () => {
+    window.open("https://www.google.com/search?q=MAX+CLEANERS+Lavanderia+Planchaduria+Tampico", "_blank", "noopener,noreferrer");
+  };
+
   const cargarClima = async () => {
     setMostrarClima(true);
     setErrorClima("");
@@ -95,6 +99,9 @@ export default function Home() {
           <button onClick={() => setMostrarSugerencia((prev) => !prev)} style={{ ...boton, background: "#f59e0b", color: "#111827", padding: 14, fontSize: 16 }}>💡 Sugerir ruta / comentarios</button>
           {mostrarSugerencia && <div style={{ background: "rgba(15,23,42,.95)", border: "1px solid rgba(148,163,184,.35)", borderRadius: 18, padding: 14, display: "flex", flexDirection: "column", gap: 10 }}><input value={rutaSugerida} onChange={(e) => setRutaSugerida(e.target.value)} placeholder="Ruta sugerida" style={campo} /><input value={zonaSugerida} onChange={(e) => setZonaSugerida(e.target.value)} placeholder="Zona" style={campo} /><textarea value={comentarioSugerido} onChange={(e) => setComentarioSugerido(e.target.value)} placeholder="Comentario" rows={3} style={{ ...campo, resize: "vertical" }} /><button onClick={enviarSugerencia} disabled={enviandoSugerencia} style={{ ...boton, background: enviandoSugerencia ? "#64748b" : "#22c55e", color: "white", padding: 12 }}>{enviandoSugerencia ? "Enviando..." : "Enviar sugerencia"}</button></div>}
         </div>
+        <aside style={{ position: "fixed", right: 14, bottom: 190, width: "min(245px, calc(100vw - 28px))", background: "white", color: "#0f172a", borderRadius: 18, overflow: "hidden", boxShadow: "0 22px 55px rgba(2,6,23,.32)", zIndex: 20, textAlign: "left" }}>
+          <button onClick={abrirMaxCleanersGoogle} style={{ width: "100%", border: "none", background: "linear-gradient(135deg, #fef3c7, #fde68a)", padding: 12, color: "#0f172a", cursor: "pointer", textAlign: "left" }}><strong style={{ display: "block", fontSize: 14 }}>🧺 MAX CLEANERS</strong><span style={{ fontSize: 11, fontWeight: 800, color: "#92400e" }}>Lavandería y planchaduría · toca para ver ficha en Google</span></button>
+        </aside>
         <aside style={{ position: "fixed", right: 14, bottom: 14, width: "min(245px, calc(100vw - 28px))", background: "white", color: "#0f172a", borderRadius: 18, overflow: "hidden", boxShadow: "0 22px 55px rgba(2,6,23,.32)", zIndex: 20, textAlign: "left" }}>
           <button onClick={cargarClima} style={{ width: "100%", border: "none", background: "linear-gradient(135deg, #dbeafe, #e0f2fe)", padding: 12, color: "#0f172a", cursor: "pointer", textAlign: "left" }}><strong style={{ display: "block", fontSize: 14 }}>🌤️ Tampico al Minuto</strong><span style={{ fontSize: 11, fontWeight: 800, color: "#0369a1" }}>Ventana patrocinada gratis · toca para ver clima</span></button>
           {mostrarClima && <div style={{ padding: 12 }}>{cargandoClima && <b>Cargando clima...</b>}{errorClima && <b style={{ color: "#b91c1c" }}>{errorClima}</b>}{clima && <div style={{ marginBottom: 10 }}><div style={{ fontSize: 30, fontWeight: 900 }}>{icono(clima.codigo)} {clima.temperatura}°C</div><div style={{ fontSize: 12, fontWeight: 800, color: "#0369a1" }}>{descripcion(clima.codigo)} · Sensación {clima.sensacion}°C</div></div>}<button onClick={() => setModo("pasajero")} style={{ ...boton, background: "#2563eb", color: "white", padding: 10 }}>Seguir en Rutas Tampico</button></div>}

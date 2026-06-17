@@ -159,15 +159,23 @@ export function useOnlineUsers(): OnlineUserCounts {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, PRESENCE_COLLECTION), (snapshot) => {
-      setRecords(
-        snapshot.docs.map((docSnap) =>
-          normalizePresenceRecord(docSnap.id, docSnap.data())
-        )
-      );
-      setLoading(false);
-      setNow(Date.now());
-    });
+    const unsubscribe = onSnapshot(
+      collection(db, PRESENCE_COLLECTION),
+      (snapshot) => {
+        setRecords(
+          snapshot.docs.map((docSnap) =>
+            normalizePresenceRecord(docSnap.id, docSnap.data())
+          )
+        );
+        setLoading(false);
+        setNow(Date.now());
+      },
+      (error) => {
+        console.warn("No se pudo leer usuarios en linea", error);
+        setRecords([]);
+        setLoading(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);

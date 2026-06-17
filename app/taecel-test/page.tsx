@@ -26,12 +26,12 @@ const PRUEBAS_TAECEL = [
   { carrier: "Movistar", phone: "5555555560", sku: "MOV100", amount: "100" },
   { carrier: "Movistar", phone: "5555555565", sku: "MOV120", amount: "120" },
   { carrier: "Movistar", phone: "5555555200", sku: "MOV150", amount: "150" },
-  { carrier: "Otros", phone: "", sku: "SKY000", amount: "" },
-  { carrier: "Otros", phone: "", sku: "TMX001", amount: "" },
-  { carrier: "Otros", phone: "", sku: "CFE000", amount: "" },
-  { carrier: "Otros", phone: "", sku: "MEG000", amount: "" },
-  { carrier: "Otros", phone: "", sku: "DSH000", amount: "" },
-  { carrier: "Otros", phone: "", sku: "MAX000", amount: "" },
+  { carrier: "Sky", phone: "871235412635", sku: "SKY000", amount: "95" },
+  { carrier: "Telmex", phone: "6589745213", sku: "TMX001", amount: "100" },
+  { carrier: "Cfe", phone: "125478965412365478965230126654", sku: "CFE000", amount: "260" },
+  { carrier: "Megacable", phone: "9854123547", sku: "MEG000", amount: "131" },
+  { carrier: "Dish", phone: "27458965324125", sku: "DSH000", amount: "103" },
+  { carrier: "Maxcom", phone: "3456987", sku: "MAX000", amount: "177" },
 ];
 
 function extraerProductos(data: unknown): Array<Record<string, unknown>> {
@@ -133,6 +133,99 @@ function extraerTransId(data: unknown) {
   return "";
 }
 
+const esperar = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function campoLocal(obj: unknown, claves: string[]): string {
+  if (!obj || typeof obj !== "object") return "";
+
+  const objetivos = claves.map((c) => c.toLowerCase());
+  const record = obj as Record<string, unknown>;
+
+  for (const key of Object.keys(record)) {
+    if (objetivos.includes(key.toLowerCase())) {
+      const value = record[key];
+
+      if (typeof value === "string" || typeof value === "number") {
+        return String(value);
+      }
+    }
+  }
+
+  return "";
+}
+
+// La respuesta de /api/taecel/* viene envuelta: { ok, status, contentType, data }
+// donde data es la respuesta TAECEL: { success, error, message, data: {...} | [] }.
+function desenvolverTaecel(wrapper: unknown) {
+  let payload: unknown = wrapper;
+
+  if (payload && typeof payload === "object" && "data" in (payload as Record<string, unknown>)) {
+    payload = (payload as Record<string, unknown>).data;
+  }
+
+  const payloadRec =
+    payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+
+  let detalle: unknown = payload;
+
+  if (
+    payloadRec &&
+    payloadRec.data &&
+    typeof payloadRec.data === "object" &&
+    !Array.isArray(payloadRec.data)
+  ) {
+    detalle = payloadRec.data;
+  }
+
+  const successRaw = payloadRec ? payloadRec.success : undefined;
+  const messageRaw = payloadRec ? payloadRec.message : undefined;
+
+  return {
+    payload,
+    detalle,
+    success: typeof successRaw === "boolean" ? successRaw : undefined,
+    message: typeof messageRaw === "string" ? messageRaw : "",
+  };
+}
+
+function extraerStatusTaecel(wrapper: unknown) {
+  const { payload, detalle, success, message } = desenvolverTaecel(wrapper);
+  const folio = campoLocal(detalle, ["Folio", "folio"]);
+  const statusTxt = campoLocal(detalle, ["Status", "Estatus", "estatus"]);
+  const errorCode = campoLocal(payload, ["error", "Error"]);
+
+  let estatus = statusTxt;
+
+  if (!estatus) {
+    if (success === true) estatus = "Exitosa";
+    else if (success === false) estatus = "Error";
+  }
+
+  let descripcion =
+    message ||
+    campoLocal(detalle, ["Nota", "nota", "Mensaje", "message", "Descripcion", "descripcion"]);
+
+  if (success === false && errorCode) {
+    descripcion = `(${errorCode}) ${descripcion}`.trim();
+  }
+
+  const fecha = campoLocal(detalle, ["Fecha", "fecha", "Date", "Timestamp"]);
+
+  return { folio, estatus, descripcion, fecha, success };
+}
+
+type ResultadoMatriz = {
+  referencia: string;
+  carrier: string;
+  codigo: string;
+  monto: string;
+  fechaHora: string;
+  transId: string;
+  folio: string;
+  estatus: string;
+  descripcion: string;
+};
+
 function JsonBlock({ value }: { value: unknown }) {
   return (
     <pre
@@ -187,6 +280,9 @@ export default function TaecelTestPage() {
   const [amount, setAmount] = useState("");
   const [transId, setTransId] = useState("");
   const [certLogs, setCertLogs] = useState<CertLog[]>([]);
+  const [resultados, setResultados] = useState<ResultadoMatriz[]>([]);
+  const [corriendoMatriz, setCorriendoMatriz] = useState(false);
+  const [progreso, setProgreso] = useState({ hecho: 0, total: 0 });
   const productos = useMemo(
     () => extraerProductos(productsState.data),
     [productsState.data]
@@ -213,6 +309,159 @@ export default function TaecelTestPage() {
     setSku(prueba.sku);
     setPhone(prueba.phone);
     setAmount(prueba.amount);
+  };
+
+  const ejecutarMatriz = async () => {
+    if (corriendoMatriz) return;
+
+    const total = PRUEBAS_TAECEL.length;
+    const confirmar = window.confirm(
+      `Se ejecutarán los ${total} casos de la matriz contra el sandbox de TAECEL (RequestTXN + StatusTXN cada uno). ¿Continuar?`
+    );
+
+    if (!confirmar) return;
+
+    setCorriendoMatriz(true);
+    setResultados([]);
+    setProgreso({ hecho: 0, total });
+
+    const filas: ResultadoMatriz[] = [];
+
+    for (let i = 0; i < total; i += 1) {
+      const prueba = PRUEBAS_TAECEL[i];
+      let transId = "";
+      let folio = "";
+      let estatus = "";
+      let descripcion = "";
+      let fechaHora = "";
+
+      try {
+        let reqPayloadMsg = "";
+
+        // RequestTXN: hasta 2 intentos por si hubo un error transitorio.
+        for (let intento = 0; intento < 2 && !transId; intento += 1) {
+          if (intento > 0) await esperar(1500);
+
+          const reqResponse = await fetch("/api/taecel/request", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              sku: prueba.sku,
+              phone: prueba.phone,
+              amount: prueba.amount,
+            }),
+          });
+          const reqData = await leerRespuesta(reqResponse);
+
+          registrarLog(
+            "RequestTXN",
+            { sku: prueba.sku, phone: prueba.phone, amount: prueba.amount, intento },
+            reqData
+          );
+
+          transId = extraerTransId(reqData);
+          reqPayloadMsg = desenvolverTaecel(reqData).message || reqPayloadMsg;
+        }
+
+        if (transId) {
+          // StatusTXN: hasta 3 consultas, esperando a que llegue el Folio.
+          for (let intento = 0; intento < 3; intento += 1) {
+            if (intento > 0) await esperar(1500);
+
+            const statusResponse = await fetch("/api/taecel/status", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ transId }),
+            });
+            const statusData = await leerRespuesta(statusResponse);
+
+            registrarLog("StatusTXN", { transId, intento }, statusData);
+
+            const datos = extraerStatusTaecel(statusData);
+            folio = datos.folio;
+            estatus = datos.estatus;
+            descripcion = datos.descripcion;
+            fechaHora = datos.fecha || new Date().toLocaleString("es-MX");
+
+            // Listo si ya hay folio o si TAECEL marcó una falla definitiva.
+            if (folio || datos.success === false) break;
+          }
+        } else {
+          estatus = "Error";
+          descripcion = reqPayloadMsg || "Sin TransID: RequestTXN no fue exitoso.";
+          fechaHora = new Date().toLocaleString("es-MX");
+        }
+      } catch (error) {
+        estatus = "Error";
+        descripcion = error instanceof Error ? error.message : "Error desconocido.";
+        fechaHora = new Date().toLocaleString("es-MX");
+      }
+
+      filas.push({
+        referencia: prueba.phone,
+        carrier: prueba.carrier,
+        codigo: prueba.sku,
+        monto: prueba.amount,
+        fechaHora,
+        transId,
+        folio,
+        estatus,
+        descripcion,
+      });
+
+      setResultados([...filas]);
+      setProgreso({ hecho: i + 1, total });
+
+      if (i < total - 1) await esperar(800);
+    }
+
+    setCorriendoMatriz(false);
+  };
+
+  const exportarMatriz = () => {
+    const encabezados = [
+      "REFERENCIA",
+      "CARRIER",
+      "CODIGO",
+      "MONTO",
+      "FECHA/HORA",
+      "TRANS ID",
+      "FOLIO",
+      "ESTATUS",
+      "DESCRIPCION",
+    ];
+    const lineas = [encabezados.join("\t")];
+
+    resultados.forEach((fila) => {
+      lineas.push(
+        [
+          fila.referencia,
+          fila.carrier,
+          fila.codigo,
+          fila.monto,
+          fila.fechaHora,
+          fila.transId,
+          fila.folio,
+          fila.estatus,
+          fila.descripcion,
+        ]
+          .map((valor) => String(valor).replace(/[\t\n\r]/g, " "))
+          .join("\t")
+      );
+    });
+
+    const blob = new Blob([lineas.join("\n")], {
+      type: "text/tab-separated-values;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `taecel-matriz-resultados-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")}.tsv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportarLogs = () => {
@@ -389,6 +638,125 @@ export default function TaecelTestPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gap: 12,
+            border: "1px solid rgba(34,197,94,.35)",
+            borderRadius: 22,
+            background: "rgba(8,47,73,.36)",
+            padding: 18,
+          }}
+        >
+          <h2 style={{ margin: 0 }}>Matriz de certificación ({PRUEBAS_TAECEL.length} casos)</h2>
+          <p style={{ color: "#cbd5e1", margin: 0, fontSize: 14 }}>
+            Corre los {PRUEBAS_TAECEL.length} casos en orden (RequestTXN + StatusTXN) y exporta los
+            resultados con TransID/Folio para entregar a TAECEL.
+          </p>
+
+          <button
+            type="button"
+            onClick={ejecutarMatriz}
+            disabled={corriendoMatriz}
+            style={{
+              border: 0,
+              borderRadius: 14,
+              background: corriendoMatriz ? "#64748b" : "#22c55e",
+              color: "white",
+              cursor: corriendoMatriz ? "not-allowed" : "pointer",
+              fontWeight: 900,
+              padding: "14px 16px",
+              fontSize: 16,
+            }}
+          >
+            {corriendoMatriz
+              ? `Ejecutando ${progreso.hecho}/${progreso.total}...`
+              : `▶ Ejecutar matriz completa (${PRUEBAS_TAECEL.length})`}
+          </button>
+
+          {progreso.total > 0 && (
+            <div
+              style={{
+                height: 8,
+                borderRadius: 999,
+                background: "#0b1220",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${(progreso.hecho / progreso.total) * 100}%`,
+                  background: "#22c55e",
+                  transition: "width .25s",
+                }}
+              />
+            </div>
+          )}
+
+          {resultados.length > 0 && (
+            <>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", color: "#93c5fd" }}>
+                      {["REFERENCIA", "CARRIER", "CODIGO", "MONTO", "TRANS ID", "FOLIO", "ESTATUS", "DESCRIPCION"].map(
+                        (h) => (
+                          <th key={h} style={{ padding: "6px 8px", borderBottom: "1px solid #334155" }}>
+                            {h}
+                          </th>
+                        )
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {resultados.map((fila, index) => {
+                      const exito = /exito|success|true|correct/i.test(fila.estatus);
+
+                      return (
+                        <tr key={`${fila.codigo}-${index}`} style={{ borderBottom: "1px solid #1e293b" }}>
+                          <td style={{ padding: "6px 8px" }}>{fila.referencia}</td>
+                          <td style={{ padding: "6px 8px" }}>{fila.carrier}</td>
+                          <td style={{ padding: "6px 8px" }}>{fila.codigo}</td>
+                          <td style={{ padding: "6px 8px" }}>{fila.monto}</td>
+                          <td style={{ padding: "6px 8px" }}>{fila.transId || "—"}</td>
+                          <td style={{ padding: "6px 8px" }}>{fila.folio || "—"}</td>
+                          <td
+                            style={{
+                              padding: "6px 8px",
+                              fontWeight: 800,
+                              color: exito ? "#86efac" : "#fca5a5",
+                            }}
+                          >
+                            {fila.estatus || "—"}
+                          </td>
+                          <td style={{ padding: "6px 8px", color: "#cbd5e1" }}>{fila.descripcion || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <button
+                type="button"
+                onClick={exportarMatriz}
+                style={{
+                  border: 0,
+                  borderRadius: 14,
+                  background: "#38bdf8",
+                  color: "#082f49",
+                  cursor: "pointer",
+                  fontWeight: 900,
+                  padding: "12px 14px",
+                }}
+              >
+                Exportar resultados (Excel/TSV)
+              </button>
+            </>
+          )}
         </div>
 
         <div

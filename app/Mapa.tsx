@@ -64,16 +64,33 @@ type ViajeActivo = {
 type UsuarioKm = {
   kmTotales: number;
   viajesTotales: number;
+  kaymaxMonedas: number;
   nivel: string;
   ultimoViaje: string | null;
+};
+
+type KaymaxMoneda = {
+  id: string;
+  ruta: string;
+  indiceSemaforo: number;
+  posicion: [number, number];
+};
+
+type KaymaxPop = {
+  id: string;
+  monedas: number;
+  km: number;
 };
 
 const USER_ID_STORAGE_KEY = "rutasKaymax.userId";
 const VIAJE_ACTIVO_STORAGE_KEY = "rutasKaymax.viajeActivo";
 const EARTH_RADIUS_KM = 6371;
+const KAYMAX_MONEDA_VALOR = 10;
+const KAYMAX_MONEDA_KM = 0.1;
 const USUARIO_KM_INICIAL: UsuarioKm = {
   kmTotales: 0,
   viajesTotales: 0,
+  kaymaxMonedas: 0,
   nivel: "Nuevo pasajero",
   ultimoViaje: null,
 };
@@ -169,6 +186,28 @@ function obtenerNivel(kmTotales: number) {
 
 function redondearKm(km: number) {
   return Math.round(km * 100) / 100;
+}
+
+function normalizarIdSegmento(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function normalizarCoordenadaId(value: number) {
+  return value.toFixed(5).replace("-", "m").replace(".", "p");
+}
+
+function crearMonedaId(ruta: string, indiceSemaforo: number, posicion: [number, number]) {
+  return [
+    normalizarIdSegmento(ruta) || "ruta",
+    indiceSemaforo,
+    normalizarCoordenadaId(posicion[0]),
+    normalizarCoordenadaId(posicion[1]),
+  ].join("-");
 }
 
 function distanciaHaversineKm(
@@ -306,6 +345,23 @@ const busIcon = new L.DivIcon({
   iconSize: [56, 56],
   iconAnchor: [28, 31],
   popupAnchor: [0, -26],
+});
+
+const kaymaxMonedaIcon = new L.DivIcon({
+  html: `
+    <div class="rt-kaymax-coin-marker" role="button" aria-label="Recoger Kaymax Moneda">
+      <span class="rt-kaymax-coin-marker__spark rt-kaymax-coin-marker__spark--one"></span>
+      <span class="rt-kaymax-coin-marker__spark rt-kaymax-coin-marker__spark--two"></span>
+      <span class="rt-kaymax-coin-marker__coin">
+        <span class="rt-kaymax-coin-marker__shine"></span>
+        <span class="rt-kaymax-coin-marker__value">$10</span>
+      </span>
+    </div>
+  `,
+  className: "",
+  iconSize: [48, 58],
+  iconAnchor: [24, 46],
+  popupAnchor: [0, -42],
 });
 
 const miUbicacionIcon = new L.DivIcon({
@@ -870,6 +926,26 @@ function BusAnimado({ bus }: { bus: Bus }) {
   );
 }
 
+function MonedaKaymax({
+  moneda,
+  onRecoger,
+}: {
+  moneda: KaymaxMoneda;
+  onRecoger: (moneda: KaymaxMoneda) => void;
+}) {
+  return (
+    <Marker
+      position={moneda.posicion}
+      icon={kaymaxMonedaIcon}
+      riseOnHover={true}
+      eventHandlers={{
+        click: () => onRecoger(moneda),
+      }}
+      title="Kaymax Moneda $10"
+    />
+  );
+}
+
 function AjustarMapa({ ubicacion }: { ubicacion: [number, number] | null }) {
   const map = useMap();
 
@@ -905,6 +981,16 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
+  const [monedasRecogidasSesion, setMonedasRecogidasSesion] = useState<
+    Set<string>
+  >(new Set());
+  const [monedasRecogidasFirebase, setMonedasRecogidasFirebase] = useState<
+    Set<string>
+  >(new Set());
+  const [recogiendoMonedaId, setRecogiendoMonedaId] = useState<string | null>(
+    null
+  );
+  const [kaymaxPop, setKaymaxPop] = useState<KaymaxPop | null>(null);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -957,6 +1043,7 @@ export default function Mapa({
       const data = snapshot.data();
       const kmTotales = obtenerNumero(data.kmTotales);
       const viajesTotales = obtenerNumero(data.viajesTotales);
+      const kaymaxMonedas = obtenerNumero(data.kaymaxMonedas);
       const nivel =
         typeof data.nivel === "string" && data.nivel
           ? data.nivel
@@ -965,6 +1052,7 @@ export default function Mapa({
       setUsuarioKm({
         kmTotales,
         viajesTotales,
+        kaymaxMonedas,
         nivel,
         ultimoViaje: normalizarUltimoViaje(data.ultimoViaje),
       });
@@ -972,6 +1060,33 @@ export default function Mapa({
 
     return () => unsub();
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setMonedasRecogidasFirebase(new Set());
+      return;
+    }
+
+    const monedasRef = collection(
+      db,
+      "usuariosMonedas",
+      userId,
+      "monedasRecogidas"
+    );
+    const unsub = onSnapshot(monedasRef, (snapshot) => {
+      setMonedasRecogidasFirebase(new Set(snapshot.docs.map((item) => item.id)));
+    });
+
+    return () => unsub();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!kaymaxPop) return;
+
+    const timeout = window.setTimeout(() => setKaymaxPop(null), 1500);
+
+    return () => window.clearTimeout(timeout);
+  }, [kaymaxPop]);
 
   const rutasDeZona = useMemo(() => {
     return rutas.filter((ruta) => {
@@ -1002,6 +1117,30 @@ export default function Mapa({
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
+  const monedasKaymax = useMemo<KaymaxMoneda[]>(() => {
+    if (!rutaMapaSeleccionada) return [];
+
+    return rutaMapaSeleccionada.puntos.map((posicion, index) => ({
+      id: crearMonedaId(rutaMapaSeleccionada.nombre, index, posicion),
+      ruta: rutaMapaSeleccionada.nombre,
+      indiceSemaforo: index + 1,
+      posicion,
+    }));
+  }, [rutaMapaSeleccionada]);
+  const monedasKaymaxVisibles = useMemo(() => {
+    return monedasKaymax.filter(
+      (moneda) =>
+        !monedasRecogidasSesion.has(moneda.id) &&
+        !monedasRecogidasFirebase.has(moneda.id) &&
+        recogiendoMonedaId !== moneda.id
+    );
+  }, [
+    monedasKaymax,
+    monedasRecogidasFirebase,
+    monedasRecogidasSesion,
+    recogiendoMonedaId,
+  ]);
+  const kaymaxMonedasUsuario = obtenerNumero(usuarioKm.kaymaxMonedas);
 
   useEffect(() => {
     if (estiloMapa === "nocturno" && !nocturnoDesbloqueado) {
@@ -1062,6 +1201,93 @@ export default function Mapa({
         alert("No se pudo obtener tu ubicación.");
       }
     );
+  };
+
+  const recogerMonedaKaymax = async (moneda: KaymaxMoneda) => {
+    if (
+      recogiendoMonedaId ||
+      monedasRecogidasSesion.has(moneda.id) ||
+      monedasRecogidasFirebase.has(moneda.id)
+    ) {
+      return;
+    }
+
+    const id = userId || obtenerOCrearUserId();
+    setUserId(id);
+    setRecogiendoMonedaId(moneda.id);
+    setMonedasRecogidasSesion((prev) => new Set(prev).add(moneda.id));
+
+    try {
+      const usuarioRef = doc(db, "usuariosKm", id);
+      const monedaRef = doc(
+        db,
+        "usuariosMonedas",
+        id,
+        "monedasRecogidas",
+        moneda.id
+      );
+
+      const monedaGuardada = await runTransaction(db, async (transaction) => {
+        const [monedaSnapshot, usuarioSnapshot] = await Promise.all([
+          transaction.get(monedaRef),
+          transaction.get(usuarioRef),
+        ]);
+
+        if (monedaSnapshot.exists()) {
+          return false;
+        }
+
+        const data = usuarioSnapshot.exists() ? usuarioSnapshot.data() : {};
+        const kmTotales = redondearKm(
+          obtenerNumero(data.kmTotales) + KAYMAX_MONEDA_KM
+        );
+        const kaymaxMonedas =
+          obtenerNumero(data.kaymaxMonedas) + KAYMAX_MONEDA_VALOR;
+
+        transaction.set(monedaRef, {
+          userId: id,
+          monedaId: moneda.id,
+          ruta: moneda.ruta,
+          indiceSemaforo: moneda.indiceSemaforo,
+          lat: moneda.posicion[0],
+          lng: moneda.posicion[1],
+          valorMonedas: KAYMAX_MONEDA_VALOR,
+          kmBonificacion: KAYMAX_MONEDA_KM,
+          fechaCreacion: serverTimestamp(),
+        });
+
+        transaction.set(
+          usuarioRef,
+          {
+            userId: id,
+            kmTotales,
+            kaymaxMonedas,
+            nivel: obtenerNivel(kmTotales),
+            fechaActualizacion: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        return true;
+      });
+
+      if (monedaGuardada) {
+        setKaymaxPop({
+          id: `${moneda.id}-${Date.now()}`,
+          monedas: KAYMAX_MONEDA_VALOR,
+          km: KAYMAX_MONEDA_KM,
+        });
+      }
+    } catch {
+      setMonedasRecogidasSesion((prev) => {
+        const siguiente = new Set(prev);
+        siguiente.delete(moneda.id);
+        return siguiente;
+      });
+      alert("No se pudo recoger la Kaymax Moneda. Intenta otra vez.");
+    } finally {
+      setRecogiendoMonedaId(null);
+    }
   };
 
   const iniciarViaje = async () => {
@@ -1426,6 +1652,14 @@ export default function Mapa({
 
   return (
     <div className="rt-map-shell">
+      {kaymaxPop && (
+        <div key={kaymaxPop.id} className="rt-kaymax-pop" role="status">
+          <span className="rt-kaymax-pop__coin">$10</span>
+          <strong>+{kaymaxPop.monedas} Kaymax Monedas</strong>
+          <small>+{kaymaxPop.km.toFixed(2)} km</small>
+        </div>
+      )}
+
       <div className="rt-map-panel">
         <div className="rt-map-panel__main">
           <div
@@ -1451,6 +1685,9 @@ export default function Mapa({
           <span>Zona: {obtenerEtiquetaZona(zonaSeleccionada)}</span>
           <span>Usuarios: {usuariosRutaSeleccionada}</span>
           <span>Camiones: {busesFiltrados.length}</span>
+          <span className="rt-kaymax-stat">
+            Kaymax Monedas: {kaymaxMonedasUsuario}
+          </span>
         </div>
 
         <div className="rt-trip-actions">
@@ -1484,6 +1721,11 @@ export default function Mapa({
         {mostrarDetalleKm && (
           <div className="rt-km-detail">
             <div>Km totales: {kilometrosUsuario.toFixed(2)}</div>
+            <div>Kaymax Monedas: {kaymaxMonedasUsuario}</div>
+            <div>
+              Monedas disponibles: {monedasKaymaxVisibles.length}/
+              {monedasKaymax.length}
+            </div>
             <div>Viajes totales: {usuarioKm.viajesTotales}</div>
             <div>Nivel: {usuarioKm.nivel}</div>
             <div>Último viaje: {formatearUltimoViaje(usuarioKm.ultimoViaje)}</div>
@@ -1606,6 +1848,14 @@ export default function Mapa({
             <Popup>Estás aquí</Popup>
           </Marker>
         )}
+
+        {monedasKaymaxVisibles.map((moneda) => (
+          <MonedaKaymax
+            key={moneda.id}
+            moneda={moneda}
+            onRecoger={recogerMonedaKaymax}
+          />
+        ))}
 
         {busesFiltrados.map((bus) => (
           <BusAnimado key={bus.id} bus={bus} />

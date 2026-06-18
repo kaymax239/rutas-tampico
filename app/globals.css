@@ -410,3 +410,493 @@ button {
     animation: none;
   }
 }
+
+.rt-map-shell--gta {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 44, 166, 0.22), transparent 28%),
+    radial-gradient(circle at 80% 70%, rgba(0, 229, 255, 0.18), transparent 30%),
+    #070716;
+}
+
+.rt-map-shell--gta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 400;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 44, 166, 0.12), transparent 28%),
+    radial-gradient(circle at center, transparent 42%, rgba(7, 7, 22, 0.34));
+  mix-blend-mode: screen;
+}
+
+.rt-map-shell--gta .rt-map-panel,
+.rt-map-shell--gta .rt-map-style-menu {
+  border-color: rgba(255, 44, 166, 0.45);
+  background:
+    linear-gradient(135deg, rgba(15, 7, 36, 0.92), rgba(21, 11, 48, 0.78)),
+    radial-gradient(circle at 10% 20%, rgba(255, 44, 166, 0.24), transparent 32%);
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 255, 0.18),
+    0 18px 48px rgba(255, 44, 166, 0.24);
+}
+
+.rt-map-tiles--gtaNeon {
+  filter: saturate(1.75) hue-rotate(155deg) contrast(1.08) brightness(0.82);
+}
+
+.rt-route-line-gta-halo {
+  filter:
+    drop-shadow(0 0 8px rgba(255, 44, 166, 0.95))
+    drop-shadow(0 0 18px rgba(0, 229, 255, 0.72));
+}
+
+.rt-route-line-gta-core {
+  filter:
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.9))
+    drop-shadow(0 0 13px rgba(255, 44, 166, 0.8));
+}
+
+.rt-zone-norte-button {
+  position: relative;
+  min-height: 82px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 44, 166, 0.78);
+  border-radius: 20px;
+  background:
+    linear-gradient(100deg, rgba(13, 13, 26, 0.34), rgba(0, 229, 255, 0.15)),
+    linear-gradient(135deg, #7b2ff7 0%, #0e1a8a 48%, #051124 100%);
+  color: #ffffff;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px;
+  text-align: left;
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 255, 0.25) inset,
+    0 0 22px rgba(255, 44, 166, 0.55),
+    0 16px 36px rgba(15, 23, 42, 0.35);
+  text-transform: uppercase;
+}
+
+.rt-zone-norte-button::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(255, 44, 166, 0.38), transparent 23%),
+    linear-gradient(180deg, transparent 35%, rgba(4, 8, 25, 0.68)),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 36px,
+      rgba(255, 255, 255, 0.05) 36px 38px
+    );
+}
+
+.rt-zone-norte-button__icon,
+.rt-zone-norte-button__text,
+.rt-zone-norte-button__car,
+.rt-zone-norte-button__arrow {
+  position: relative;
+  z-index: 1;
+}
+
+.rt-zone-norte-button__icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(255, 44, 166, 0.22);
+  box-shadow: 0 0 18px rgba(255, 44, 166, 0.65);
+  font-size: 27px;
+}
+
+.rt-zone-norte-button__text {
+  overflow: hidden;
+  font-family: "Bangers", "Montserrat", Impact, sans-serif;
+  font-size: clamp(24px, 7vw, 34px);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-shadow:
+    2px 2px 0 #2d0b58,
+    0 0 14px rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+}
+
+.rt-zone-norte-button__car {
+  width: 72px;
+  height: 24px;
+  border-radius: 999px 999px 9px 9px;
+  background: linear-gradient(90deg, #151326, #ff2ca6 52%, #00e5ff);
+  box-shadow: 0 0 18px rgba(0, 229, 255, 0.75);
+}
+
+.rt-zone-norte-button__car::before,
+.rt-zone-norte-button__car::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: #060815;
+  border: 2px solid #dbeafe;
+}
+
+.rt-zone-norte-button__car::before {
+  left: 9px;
+}
+
+.rt-zone-norte-button__car::after {
+  right: 9px;
+}
+
+.rt-zone-norte-button__arrow {
+  color: #e0f2fe;
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.rt-gta-routes-screen {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(255, 44, 166, 0.28), transparent 30%),
+    radial-gradient(circle at 85% 20%, rgba(0, 229, 255, 0.2), transparent 28%),
+    linear-gradient(180deg, #16071f 0%, #080815 46%, #05060f 100%);
+  color: #ffffff;
+  padding: 18px;
+}
+
+.rt-gta-routes-screen::before {
+  content: "🌴";
+  position: fixed;
+  top: 4vh;
+  left: 2vw;
+  color: rgba(0, 0, 0, 0.32);
+  font-size: min(34vw, 220px);
+  line-height: 1;
+  pointer-events: none;
+  text-shadow:
+    38vw 4vh 0 rgba(0, 0, 0, 0.24),
+    74vw 2vh 0 rgba(0, 0, 0, 0.22);
+}
+
+.rt-gta-routes-screen__glow {
+  position: fixed;
+  inset: auto -20% -30% -20%;
+  height: 45vh;
+  background: radial-gradient(ellipse at center, rgba(255, 44, 166, 0.28), transparent 65%);
+  pointer-events: none;
+}
+
+.rt-gta-routes-header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 14px;
+  max-width: 1040px;
+  margin: 0 auto 18px;
+  border: 1px solid rgba(255, 44, 166, 0.5);
+  border-radius: 22px;
+  background: rgba(8, 8, 21, 0.72);
+  box-shadow: 0 0 30px rgba(255, 44, 166, 0.22);
+  padding: 14px;
+  text-align: center;
+}
+
+.rt-gta-routes-header span {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.rt-gta-routes-header h1 {
+  color: #ff2ca6;
+  font-family: "Bangers", "Montserrat", Impact, sans-serif;
+  font-size: clamp(40px, 9vw, 70px);
+  font-style: italic;
+  letter-spacing: 0.03em;
+  line-height: 0.9;
+  margin: 8px 0 0;
+  text-shadow:
+    3px 3px 0 #17071f,
+    0 0 18px rgba(255, 44, 166, 0.75);
+  text-transform: uppercase;
+}
+
+.rt-gta-routes-header p {
+  color: #7dd3fc;
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0;
+  text-shadow: 0 0 12px rgba(0, 229, 255, 0.75);
+}
+
+.rt-gta-back {
+  border: 1px solid rgba(255, 44, 166, 0.75);
+  border-radius: 999px;
+  background: rgba(10, 10, 24, 0.85);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 12px 18px;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(255, 44, 166, 0.34);
+}
+
+.rt-gta-route-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.rt-gta-route-card {
+  --rt-card-accent: #ff2ca6;
+  position: relative;
+  min-height: 210px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--rt-card-accent) 72%, #ff2ca6);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(135deg, #28116d 0%, #ff2ca6 52%, #f97316 100%);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 14px;
+  text-align: left;
+  box-shadow:
+    0 0 0 1px rgba(0, 229, 255, 0.16) inset,
+    0 0 22px color-mix(in srgb, var(--rt-card-accent) 42%, transparent),
+    0 16px 34px rgba(0, 0, 0, 0.34);
+}
+
+.rt-gta-route-card--1 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(135deg, #082f49 0%, #06b6d4 50%, #fb923c 100%);
+}
+
+.rt-gta-route-card--2 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(135deg, #39135d 0%, #7c3aed 46%, #ef4444 100%);
+}
+
+.rt-gta-route-card--3 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(135deg, #3b0d2a 0%, #fb7185 45%, #facc15 100%);
+}
+
+.rt-gta-route-card--4 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(135deg, #1f2937 0%, #f97316 55%, #facc15 100%);
+}
+
+.rt-gta-route-card--5 {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 38%),
+    linear-gradient(135deg, #082f49 0%, #0f766e 50%, #22c55e 100%);
+}
+
+.rt-gta-route-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 72% 38%, rgba(251, 146, 60, 0.62), transparent 16%),
+    linear-gradient(180deg, transparent 45%, rgba(4, 5, 14, 0.72));
+}
+
+.rt-gta-route-card__badge,
+.rt-gta-route-card strong,
+.rt-gta-route-card small,
+.rt-gta-route-card__palms,
+.rt-gta-route-card__vehicle,
+.rt-gta-route-card__lock {
+  position: relative;
+  z-index: 1;
+}
+
+.rt-gta-route-card__badge {
+  align-self: flex-start;
+  border-radius: 7px;
+  background: rgba(4, 5, 14, 0.82);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 1000;
+  letter-spacing: 0.03em;
+  padding: 5px 7px;
+  text-transform: uppercase;
+}
+
+.rt-gta-route-card strong {
+  max-width: 92%;
+  margin-top: 34px;
+  font-family: "Bangers", "Montserrat", Impact, sans-serif;
+  font-size: clamp(22px, 5vw, 32px);
+  font-weight: 1000;
+  letter-spacing: 0.02em;
+  line-height: 0.98;
+  text-shadow:
+    3px 3px 0 #070714,
+    0 0 12px rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+}
+
+.rt-gta-route-card small {
+  margin-top: auto;
+  color: #dff9ff;
+  font-size: 12px;
+  font-weight: 900;
+  text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+}
+
+.rt-gta-route-card__skyline {
+  position: absolute;
+  right: 0;
+  bottom: 34px;
+  left: 0;
+  z-index: 1;
+  height: 54px;
+  opacity: 0.42;
+  background:
+    linear-gradient(to top, rgba(2, 6, 23, 0.92), rgba(2, 6, 23, 0.35)),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 13px,
+      rgba(2, 6, 23, 0.86) 13px 23px,
+      transparent 23px 34px
+    );
+}
+
+.rt-gta-route-card__sun {
+  position: absolute;
+  right: 20px;
+  bottom: 54px;
+  width: 74px;
+  height: 74px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #facc15, #fb7185 55%, transparent 56%);
+  opacity: 0.78;
+}
+
+.rt-gta-route-card__palms {
+  position: absolute;
+  right: 10px;
+  bottom: 64px;
+  font-size: 44px;
+  filter: drop-shadow(0 8px 0 rgba(2, 6, 23, 0.42));
+}
+
+.rt-gta-route-card__vehicle {
+  position: absolute;
+  right: 16px;
+  bottom: 26px;
+  width: 86px;
+  height: 30px;
+  border-radius: 999px 999px 10px 10px;
+  background: linear-gradient(90deg, #111827, var(--rt-card-accent), #00e5ff);
+  box-shadow:
+    0 0 18px rgba(0, 229, 255, 0.52),
+    0 12px 18px rgba(0, 0, 0, 0.35);
+}
+
+.rt-gta-route-card__vehicle::before,
+.rt-gta-route-card__vehicle::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #e0f2fe;
+  border-radius: 999px;
+  background: #05060f;
+}
+
+.rt-gta-route-card__vehicle::before {
+  left: 12px;
+}
+
+.rt-gta-route-card__vehicle::after {
+  right: 12px;
+}
+
+.rt-gta-route-card--locked {
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  opacity: 0.78;
+}
+
+.rt-gta-route-card--locked::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.62);
+}
+
+.rt-gta-route-card__lock {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  align-self: center;
+  margin-top: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 28px;
+  box-shadow: 0 0 22px rgba(255, 255, 255, 0.22);
+}
+
+@media (max-width: 900px) {
+  .rt-gta-route-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .rt-zone-norte-button {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 78px;
+    padding: 16px 14px;
+  }
+
+  .rt-zone-norte-button__car {
+    display: none;
+  }
+
+  .rt-gta-routes-screen {
+    padding: 12px;
+  }
+
+  .rt-gta-routes-header {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .rt-gta-route-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .rt-gta-route-card {
+    min-height: 190px;
+  }
+}

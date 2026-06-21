@@ -32,6 +32,20 @@ type Bus = {
   fecha?: Timestamp;
 };
 
+type EstadoGpsExterno = "En línea" | "Fuera de línea";
+
+type GpsExterno = {
+  id: string;
+  nombre: string;
+  ruta: string;
+  proveedor: string;
+  categoria: string;
+  estado: EstadoGpsExterno;
+  lat: number;
+  lng: number;
+  urlRastreador: string;
+};
+
 type Zona = "Tampico / Madero" | "Zona Norte / Altamira";
 
 type Ruta = {
@@ -318,6 +332,27 @@ const miUbicacionIcon = new L.DivIcon({
   className: "",
   iconSize: [28, 28],
   iconAnchor: [14, 14],
+});
+
+// Icono distinto para vehículos con GPS externo (rastreador dedicado),
+// para diferenciarlos de los choferes que comparten ubicación con el celular.
+const gpsExternoIcon = new L.DivIcon({
+  html: `
+    <div class="rt-gps-marker" aria-hidden="true">
+      <div class="rt-gps-marker__body">
+        <svg viewBox="0 0 48 48" role="img" focusable="false">
+          <circle cx="24" cy="30" r="5" fill="currentColor"/>
+          <path d="M24 25c-7 0-13 6-13 13" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          <path d="M24 18c-11 0-20 9-20 20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+          <path d="M24 11c-15 0-27 12-27 27" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".4"/>
+        </svg>
+      </div>
+    </div>
+  `,
+  className: "",
+  iconSize: [48, 48],
+  iconAnchor: [24, 30],
+  popupAnchor: [0, -28],
 });
 
 const rutas: Ruta[] = [
@@ -850,6 +885,58 @@ const rutas: Ruta[] = [
     ],
   },
 ];
+
+// Vehículos con rastreador GPS dedicado (no dependen del celular del chofer).
+// Categoría nueva: "GPS Externos". URL pública del rastreador Steren por vehículo.
+const GPS_EXTERNOS: GpsExterno[] = [
+  {
+    id: "gps-bus-01",
+    nombre: "GPS Bus 01",
+    ruta: "Tampico - Altamira",
+    proveedor: "Steren GPS-1100",
+    categoria: "GPS Externos",
+    estado: "En línea",
+    lat: 22.364418,
+    lng: -97.882343,
+    urlRastreador:
+      "https://www.gps.steren.com.mx/page/share.jsp?mapType=google&token=S1782665340456O774186ac37ac9416dae5f77dcb82d8c85d516a",
+  },
+];
+
+function GpsExternoMarker({ gps }: { gps: GpsExterno }) {
+  const posicion: [number, number] = [gps.lat, gps.lng];
+
+  return (
+    <Marker position={posicion} icon={gpsExternoIcon} riseOnHover={true}>
+      <Popup>
+        <b>{gps.nombre}</b>
+        <br />
+        Ruta: {gps.ruta}
+        <br />
+        Origen: GPS Steren
+        <br />
+        <button
+          type="button"
+          onClick={() =>
+            window.open(gps.urlRastreador, "_blank", "noopener,noreferrer")
+          }
+          style={{
+            marginTop: 8,
+            padding: "8px 12px",
+            borderRadius: 10,
+            border: "none",
+            background: "#0891b2",
+            color: "white",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          Ver ubicación en tiempo real
+        </button>
+      </Popup>
+    </Marker>
+  );
+}
 
 function BusAnimado({ bus }: { bus: Bus }) {
   const posicion: [number, number] = [bus.lat, bus.lng];
@@ -1668,6 +1755,10 @@ export default function Mapa({
 
         {busesFiltrados.map((bus) => (
           <BusAnimado key={bus.id} bus={bus} />
+        ))}
+
+        {GPS_EXTERNOS.map((gps) => (
+          <GpsExternoMarker key={gps.id} gps={gps} />
         ))}
       </MapContainer>
     </div>

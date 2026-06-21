@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -18,6 +18,7 @@ import {
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  setDoc,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -905,6 +906,17 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
+  const [rastreandoGPS, setRastreandoGPS] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1049,19 +1061,66 @@ export default function Mapa({
   };
 
   const obtenerMiUbicacion = () => {
+    console.log("GPS button clicked");
+
     if (!navigator.geolocation) {
-      alert("Tu navegador no permite ubicación.");
+      alert("Tu navegador no soporta GPS. Usa Chrome o Safari actualizado.");
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+      setRastreandoGPS(false);
+      return;
+    }
+
+    console.log("Requesting location");
+
+    const choferIdActual = modoUsuario === "chofer"
+      ? (userId || obtenerOCrearUserId())
+      : null;
+
+    const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+        console.log("Location received", pos.coords.latitude, pos.coords.longitude);
+        const coordenadas: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setUbicacion(coordenadas);
+
+        if (modoUsuario === "chofer" && choferIdActual) {
+          const busRef = doc(db, "autobuses", choferIdActual);
+          void setDoc(busRef, {
+            nombre: rutaSeleccionada || "Chofer",
+            ruta: rutaSeleccionada || "Sin ruta",
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            fecha: serverTimestamp(),
+          }, { merge: true }).catch(() => undefined);
+        }
       },
-      () => {
-        alert("No se pudo obtener tu ubicación.");
+      (error) => {
+        console.log("GPS error", error.code, error.message);
+        if (error.code === 1) {
+          alert(
+            "No se pudo activar la ubicación. Revisa permisos de GPS.\n\n" +
+            "En tu celular: Configuración → Apps → Navegador → Permisos → Ubicación → Permitir."
+          );
+        } else {
+          alert("No se pudo activar la ubicación. Revisa permisos de GPS.");
+        }
+        watchIdRef.current = null;
+        setRastreandoGPS(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
       }
     );
+
+    watchIdRef.current = watchId;
+    setRastreandoGPS(true);
+    console.log("Watch position started", watchId);
   };
 
   const iniciarViaje = async () => {
@@ -1552,10 +1611,10 @@ export default function Mapa({
         <button
           type="button"
           onClick={obtenerMiUbicacion}
-          className="rt-fab rt-fab--primary"
-          aria-label="Ir a mi ubicación"
+          className={rastreandoGPS ? "rt-fab rt-fab--primary rt-fab--active" : "rt-fab rt-fab--primary"}
+          aria-label={rastreandoGPS ? "Detener GPS" : "Activar GPS"}
         >
-          <span>GPS</span>
+          <span>{rastreandoGPS ? "GPS ●" : "GPS"}</span>
         </button>
       </div>
 

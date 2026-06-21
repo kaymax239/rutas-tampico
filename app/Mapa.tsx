@@ -301,6 +301,18 @@ function obtenerTipoRuta(ruta: Ruta): TipoRuta {
   return /^ruta\s+\d+/i.test(ruta.nombre) ? "urbano" : "micro-local";
 }
 
+// Compara nombres de ruta ignorando el orden de los extremos, p. ej.
+// "Tampico - Altamira" y "Altamira - Tampico" se consideran la misma ruta.
+function normalizarNombreRuta(nombre: string) {
+  return nombre
+    .toLowerCase()
+    .split("-")
+    .map((parte) => parte.trim())
+    .filter(Boolean)
+    .sort()
+    .join(" - ");
+}
+
 const busIcon = new L.DivIcon({
   html: `
     <div class="rt-bus-marker" aria-hidden="true">
@@ -1757,9 +1769,12 @@ export default function Mapa({
           <BusAnimado key={bus.id} bus={bus} />
         ))}
 
-        {GPS_EXTERNOS.map((gps) => (
-          <GpsExternoMarker key={gps.id} gps={gps} />
-        ))}
+        {rutaSeleccionada &&
+          GPS_EXTERNOS.filter(
+            (gps) =>
+              normalizarNombreRuta(gps.ruta) ===
+              normalizarNombreRuta(rutaSeleccionada)
+          ).map((gps) => <GpsExternoMarker key={gps.id} gps={gps} />)}
       </MapContainer>
     </div>
   );

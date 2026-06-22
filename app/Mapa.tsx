@@ -263,6 +263,21 @@ function formatearDistanciaBus(distancia: number) {
   return `Bus a ${(distancia / 1000).toFixed(2)} km de ti`;
 }
 
+// Velocidad promedio para estimar el ETA del bus (solo aproximado).
+const VELOCIDAD_PROMEDIO_ETA_BUS_KMH = 25;
+
+function formatearEtaBus(distanciaEnMetros: number) {
+  // ETA aproximado basado solo en la distancia y una velocidad promedio;
+  // no considera direccion, trafico ni posicion en tiempo real.
+  const distanciaKm = distanciaEnMetros / 1000;
+  const minutos = Math.max(
+    1,
+    Math.round((distanciaKm / VELOCIDAD_PROMEDIO_ETA_BUS_KMH) * 60)
+  );
+
+  return `${minutos} min`;
+}
+
 function calcularDistanciaRutaKm(puntos: [number, number][]) {
   if (puntos.length < 2) return 0;
 
@@ -2299,6 +2314,12 @@ export default function Mapa({
             <span>
               <small>GPS Bus 01</small>
               <b>{formatearDistanciaBus(distanciaGpsBus01Metros)}</b>
+            </span>
+          )}
+          {mostrarControlesGpsBusPasajero && distanciaGpsBus01Metros !== null && (
+            <span>
+              <small>ETA aprox</small>
+              <b>{formatearEtaBus(distanciaGpsBus01Metros)}</b>
             </span>
           )}
         </div>

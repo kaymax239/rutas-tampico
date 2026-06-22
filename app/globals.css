@@ -1004,18 +1004,19 @@ button {
 
 .rt-place-marker {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
   place-items: center;
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 9px;
   background: linear-gradient(135deg, #0f172a, #2563eb);
   box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.32),
-    0 0 0 5px rgba(37, 99, 235, 0.14);
+    0 7px 14px rgba(0, 0, 0, 0.22),
+    0 0 0 2px rgba(37, 99, 235, 0.1);
   color: #ffffff;
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 950;
+  opacity: 0.76;
 }
 
 .rt-place-marker--restaurant,
@@ -1023,15 +1024,15 @@ button {
 .rt-place-marker--cafe {
   background: linear-gradient(135deg, #7c2d12, #f97316);
   box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.32),
-    0 0 0 5px rgba(249, 115, 22, 0.14);
+    0 7px 14px rgba(0, 0, 0, 0.22),
+    0 0 0 2px rgba(249, 115, 22, 0.1);
 }
 
 .rt-place-marker--pharmacy {
   background: linear-gradient(135deg, #064e3b, #10b981);
   box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.32),
-    0 0 0 5px rgba(16, 185, 129, 0.14);
+    0 7px 14px rgba(0, 0, 0, 0.22),
+    0 0 0 2px rgba(16, 185, 129, 0.1);
 }
 
 .rt-place-marker--convenience,

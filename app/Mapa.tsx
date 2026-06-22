@@ -6,6 +6,7 @@ import {
   TileLayer,
   Marker,
   Popup,
+  Tooltip,
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
@@ -43,6 +44,18 @@ type Ruta = {
 type ModoUsuario = "chofer" | "pasajero";
 type TipoRuta = "urbano" | "micro-local";
 type PantallaFlujo = "tipos" | "zonas" | "rutas" | "mapa";
+
+type GpsExterno = {
+  id: string;
+  nombre: string;
+  ruta: string;
+  proveedor: string;
+  zona: Zona;
+  tipo: TipoRuta;
+  lat: number;
+  lng: number;
+  urlRastreador: string;
+};
 
 type MapaProps = {
   modoUsuario?: ModoUsuario;
@@ -338,6 +351,10 @@ function obtenerTipoRuta(ruta: Ruta): TipoRuta {
   return /^ruta\s+\d+/i.test(ruta.nombre) ? "urbano" : "micro-local";
 }
 
+function normalizarNombreRuta(nombre: string) {
+  return nombre.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 function obtenerIconoLugar(categoria: CategoriaLugar) {
   if (categoria === "restaurant") return "🍽";
   if (categoria === "fast_food") return "🍔";
@@ -370,9 +387,9 @@ function crearLugarIcon(categoria: CategoriaLugar) {
       </div>
     `,
     className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
   });
 }
 
@@ -733,6 +750,43 @@ const miUbicacionIcon = new L.DivIcon({
   iconAnchor: [14, 14],
 });
 
+const gpsExternoIcon = new L.DivIcon({
+  html: `
+    <div style="
+      width:44px;
+      height:44px;
+      position:relative;
+      display:grid;
+      place-items:center;
+      border:4px solid #ffffff;
+      border-radius:16px;
+      background:rgba(250,204,21,.22);
+      box-shadow:0 18px 34px rgba(15,23,42,.52),0 0 0 5px rgba(250,204,21,.34),0 0 28px rgba(250,204,21,.72);
+    " aria-hidden="true">
+      <div style="
+        position:relative;
+        width:34px;
+        height:25px;
+        border:2px solid #713f12;
+        border-radius:9px 9px 7px 7px;
+        background:linear-gradient(180deg,#fde047,#facc15);
+        box-shadow:inset 0 -4px 0 rgba(146,64,14,.18);
+      ">
+        <div style="position:absolute;left:5px;top:5px;width:8px;height:7px;border-radius:2px;background:#fffbeb;"></div>
+        <div style="position:absolute;left:16px;top:5px;width:9px;height:7px;border-radius:2px;background:#fffbeb;"></div>
+        <div style="position:absolute;right:4px;top:8px;width:4px;height:4px;border-radius:999px;background:#fef3c7;"></div>
+        <div style="position:absolute;left:6px;bottom:5px;width:24px;height:3px;border-radius:999px;background:#92400e;"></div>
+        <div style="position:absolute;left:5px;bottom:-6px;width:9px;height:9px;border:2px solid #f8fafc;border-radius:999px;background:#0f172a;"></div>
+        <div style="position:absolute;right:5px;bottom:-6px;width:9px;height:9px;border:2px solid #f8fafc;border-radius:999px;background:#0f172a;"></div>
+      </div>
+    </div>
+  `,
+  className: "",
+  iconSize: [44, 44],
+  iconAnchor: [22, 36],
+  popupAnchor: [0, -38],
+});
+
 const rutas: Ruta[] = [
   {
     zona: "Tampico / Madero",
@@ -1008,7 +1062,7 @@ const rutas: Ruta[] = [
   },
   {
     zona: "Zona Norte / Altamira",
-    nombre: "Altamira - Tampico",
+    nombre: "Tampico - Altamira",
     color: "#ef4444",
     puntos: [
       [22.392, -97.92],
@@ -1274,6 +1328,62 @@ const rutas: Ruta[] = [
   },
 ];
 
+const GPS_EXTERNOS: GpsExterno[] = [
+  {
+    id: "gps-bus-01",
+    nombre: "GPS Bus 01",
+    ruta: "Tampico - Altamira",
+    proveedor: "Steren GPS-1100",
+    zona: "Zona Norte / Altamira",
+    tipo: "micro-local",
+    lat: 22.364418,
+    lng: -97.882343,
+    urlRastreador:
+      "https://www.gps.steren.com.mx/page/share.jsp?mapType=google&token=S1782665340456O774186ac37ac9416dae5f77dcb82d8c85d516a",
+  },
+];
+
+function GpsExternoMarker({ gps }: { gps: GpsExterno }) {
+  return (
+    <Marker
+      position={[gps.lat, gps.lng]}
+      icon={gpsExternoIcon}
+      riseOnHover={true}
+      zIndexOffset={3000}
+    >
+      <Tooltip direction="top" offset={[0, -38]} permanent opacity={1}>
+        GPS Bus 01
+      </Tooltip>
+      <Popup>
+        <b>{gps.nombre}</b>
+        <br />
+        Ruta: {gps.ruta}
+        <br />
+        Origen: GPS Steren
+        <br />
+        <button
+          type="button"
+          onClick={() =>
+            window.open(gps.urlRastreador, "_blank", "noopener,noreferrer")
+          }
+          style={{
+            marginTop: 8,
+            border: "0",
+            borderRadius: 999,
+            background: "#facc15",
+            color: "#422006",
+            cursor: "pointer",
+            fontWeight: 900,
+            padding: "8px 12px",
+          }}
+        >
+          Ver ubicación en tiempo real
+        </button>
+      </Popup>
+    </Marker>
+  );
+}
+
 function BusAnimado({ bus }: { bus: Bus }) {
   const posicion: [number, number] = [bus.lat, bus.lng];
 
@@ -1298,10 +1408,14 @@ function ControlarVistaMapa({
   ubicacion,
   ruta,
   centrarRutaSolicitud,
+  gpsDestino,
+  centrarGpsSolicitud,
 }: {
   ubicacion: [number, number] | null;
   ruta?: Ruta;
   centrarRutaSolicitud: number;
+  gpsDestino?: GpsExterno;
+  centrarGpsSolicitud: number;
 }) {
   const map = useMap();
 
@@ -1322,6 +1436,15 @@ function ControlarVistaMapa({
       maxZoom: 15,
     });
   }, [centrarRutaSolicitud, map, ruta]);
+
+  useEffect(() => {
+    if (!gpsDestino || centrarGpsSolicitud === 0) return;
+
+    map.flyTo([gpsDestino.lat, gpsDestino.lng], 17, {
+      animate: true,
+      duration: 0.9,
+    });
+  }, [centrarGpsSolicitud, gpsDestino, map]);
 
   return null;
 }
@@ -1348,6 +1471,7 @@ export default function Mapa({
   const [procesandoViaje, setProcesandoViaje] = useState(false);
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [centrarRutaSolicitud, setCentrarRutaSolicitud] = useState(0);
+  const [centrarGpsSolicitud, setCentrarGpsSolicitud] = useState(0);
   const [lugaresActivos, setLugaresActivos] = useState(false);
   const [lugaresCercanos, setLugaresCercanos] = useState<LugarCercano[]>([]);
   const [mensajeLugares, setMensajeLugares] = useState("");
@@ -1531,6 +1655,22 @@ export default function Mapa({
     );
   }, [buses, rutaSeleccionada]);
 
+  const gpsExternosFiltrados = useMemo(() => {
+    if (!rutaSeleccionada) return [];
+
+    return GPS_EXTERNOS.filter(
+      (gps) =>
+        gps.zona === zonaSeleccionada &&
+        (!tipoRutaSeleccionado || gps.tipo === tipoRutaSeleccionado) &&
+        normalizarNombreRuta(gps.ruta) ===
+          normalizarNombreRuta(rutaSeleccionada)
+    );
+  }, [rutaSeleccionada, tipoRutaSeleccionado, zonaSeleccionada]);
+
+  const gpsBus01Seleccionado = gpsExternosFiltrados.find(
+    (gps) => gps.id === "gps-bus-01"
+  );
+
   const usuariosRutaSeleccionada = rutaSeleccionada
     ? conteoUsuariosPorRuta[rutaSeleccionada] || 0
     : 0;
@@ -1552,6 +1692,9 @@ export default function Mapa({
       .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
       .slice(0, 3);
   }, [lugaresCercanos, ubicacion]);
+  const lugaresMarcadoresVisibles = gpsBus01Seleccionado
+    ? []
+    : lugaresCercanosVisibles;
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -2049,6 +2192,17 @@ export default function Mapa({
           <span>Camiones: {busesFiltrados.length}</span>
           <span>Km: {kilometrosUsuario.toFixed(2)}</span>
         </div>
+
+        {gpsBus01Seleccionado && (
+          <button
+            type="button"
+            onClick={() => setCentrarGpsSolicitud((valor) => valor + 1)}
+            className="rt-mini-pill"
+            style={{ marginTop: 8, background: "#facc15", color: "#422006" }}
+          >
+            Ver GPS Bus 01
+          </button>
+        )}
       </div>
 
       <div className="rt-bottom-sheet">
@@ -2082,6 +2236,17 @@ export default function Mapa({
         </div>
 
         <div className="rt-trip-actions">
+          {gpsBus01Seleccionado && (
+            <button
+              type="button"
+              onClick={() => setCentrarGpsSolicitud((valor) => valor + 1)}
+              className="rt-trip-button rt-trip-button--ghost"
+              style={{ background: "#facc15", color: "#422006" }}
+            >
+              Ver GPS Bus 01
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setMostrarDetalleKm((prev) => !prev)}
@@ -2370,6 +2535,8 @@ export default function Mapa({
           ubicacion={ubicacion}
           ruta={rutaMapaSeleccionada}
           centrarRutaSolicitud={centrarRutaSolicitud}
+          gpsDestino={gpsBus01Seleccionado}
+          centrarGpsSolicitud={centrarGpsSolicitud}
         />
 
         <TileLayer
@@ -2378,17 +2545,18 @@ export default function Mapa({
         />
 
         {ubicacion && (
-          <Marker position={ubicacion} icon={miUbicacionIcon}>
+          <Marker position={ubicacion} icon={miUbicacionIcon} zIndexOffset={800}>
             <Popup>Estás aquí</Popup>
           </Marker>
         )}
 
         {lugaresActivos &&
-          lugaresCercanosVisibles.map((lugar) => (
+          lugaresMarcadoresVisibles.map((lugar) => (
             <Marker
               key={lugar.id}
               position={[lugar.lat, lugar.lng]}
               icon={crearLugarIcon(lugar.categoria)}
+              zIndexOffset={50}
               eventHandlers={{
                 click: () => void registrarClickNegocio(lugar, "marcador"),
               }}
@@ -2426,42 +2594,12 @@ export default function Mapa({
             </Marker>
           ))}
 
-        {lugaresActivos &&
-          lugaresCercanosVisibles.map((lugar) => (
-            <Popup
-              key={`${lugar.id}-popup`}
-              position={[lugar.lat, lugar.lng]}
-              closeButton={false}
-              autoClose={false}
-              closeOnClick={false}
-              className="rt-place-auto-popup"
-            >
-              <b>{lugar.nombre}</b>
-              <br />a {lugar.distanciaMetros} m
-              <br />
-              {ETIQUETAS_LUGARES[lugar.categoria]}
-              <br />
-              <button
-                type="button"
-                onClick={() => void registrarClickNegocio(lugar, "popup")}
-                style={{
-                  marginTop: 8,
-                  border: "0",
-                  borderRadius: 999,
-                  background: "#2563eb",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: 800,
-                  padding: "7px 10px",
-                }}
-              >
-                Ver detalle
-              </button>
-            </Popup>
-          ))}
-
         {busesFiltrados.map((bus) => (
           <BusAnimado key={bus.id} bus={bus} />
+        ))}
+
+        {gpsExternosFiltrados.map((gps) => (
+          <GpsExternoMarker key={gps.id} gps={gps} />
         ))}
       </MapContainer>
     </div>

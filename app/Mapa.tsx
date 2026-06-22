@@ -5,6 +5,7 @@ import {
   MapContainer,
   TileLayer,
   Marker,
+  Polyline,
   Popup,
   Tooltip,
   useMap,
@@ -254,6 +255,12 @@ function distanciaHaversineKm(
 
 function distanciaMetros(inicio: [number, number], fin: [number, number]) {
   return distanciaHaversineKm(inicio, fin) * 1000;
+}
+
+function formatearDistanciaBus(distancia: number) {
+  if (distancia < 1000) return `Bus a ${Math.round(distancia)} m de ti`;
+
+  return `Bus a ${(distancia / 1000).toFixed(2)} km de ti`;
 }
 
 function calcularDistanciaRutaKm(puntos: [number, number][]) {
@@ -1410,12 +1417,14 @@ function ControlarVistaMapa({
   centrarRutaSolicitud,
   gpsDestino,
   centrarGpsSolicitud,
+  centrarUsuarioYGpsSolicitud,
 }: {
   ubicacion: [number, number] | null;
   ruta?: Ruta;
   centrarRutaSolicitud: number;
   gpsDestino?: GpsExterno;
   centrarGpsSolicitud: number;
+  centrarUsuarioYGpsSolicitud: number;
 }) {
   const map = useMap();
 
@@ -1446,6 +1455,22 @@ function ControlarVistaMapa({
     });
   }, [centrarGpsSolicitud, gpsDestino, map]);
 
+  useEffect(() => {
+    if (!ubicacion || !gpsDestino || centrarUsuarioYGpsSolicitud === 0) return;
+
+    const bounds = L.latLngBounds([
+      ubicacion,
+      [gpsDestino.lat, gpsDestino.lng],
+    ]);
+
+    map.fitBounds(bounds, {
+      animate: true,
+      duration: 0.9,
+      padding: [74, 74],
+      maxZoom: 16,
+    });
+  }, [centrarUsuarioYGpsSolicitud, gpsDestino, map, ubicacion]);
+
   return null;
 }
 
@@ -1472,6 +1497,8 @@ export default function Mapa({
   const [mostrarDetalleKm, setMostrarDetalleKm] = useState(false);
   const [centrarRutaSolicitud, setCentrarRutaSolicitud] = useState(0);
   const [centrarGpsSolicitud, setCentrarGpsSolicitud] = useState(0);
+  const [centrarUsuarioYGpsSolicitud, setCentrarUsuarioYGpsSolicitud] =
+    useState(0);
   const [lugaresActivos, setLugaresActivos] = useState(false);
   const [lugaresCercanos, setLugaresCercanos] = useState<LugarCercano[]>([]);
   const [mensajeLugares, setMensajeLugares] = useState("");
@@ -1695,6 +1722,15 @@ export default function Mapa({
   const lugaresMarcadoresVisibles = gpsBus01Seleccionado
     ? []
     : lugaresCercanosVisibles;
+  const posicionGpsBus01: [number, number] | null = gpsBus01Seleccionado
+    ? [gpsBus01Seleccionado.lat, gpsBus01Seleccionado.lng]
+    : null;
+  const distanciaGpsBus01Metros =
+    ubicacion && posicionGpsBus01
+      ? distanciaMetros(ubicacion, posicionGpsBus01)
+      : null;
+  const mostrarControlesGpsBusPasajero =
+    modoUsuario === "pasajero" && Boolean(gpsBus01Seleccionado);
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -1752,6 +1788,32 @@ export default function Mapa({
       },
       () => {
         alert("No se pudo obtener tu ubicación.");
+      }
+    );
+  };
+
+  const verBusYMiUbicacion = () => {
+    if (!gpsBus01Seleccionado) return;
+
+    if (!navigator.geolocation) {
+      alert("Tu navegador no permite ubicación.");
+      setCentrarGpsSolicitud((valor) => valor + 1);
+      return;
+    }
+
+    if (ubicacion) {
+      setCentrarUsuarioYGpsSolicitud((valor) => valor + 1);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+        setCentrarUsuarioYGpsSolicitud((valor) => valor + 1);
+      },
+      () => {
+        alert("No se pudo obtener tu ubicación.");
+        setCentrarGpsSolicitud((valor) => valor + 1);
       }
     );
   };
@@ -2193,14 +2255,14 @@ export default function Mapa({
           <span>Km: {kilometrosUsuario.toFixed(2)}</span>
         </div>
 
-        {gpsBus01Seleccionado && (
+        {mostrarControlesGpsBusPasajero && (
           <button
             type="button"
-            onClick={() => setCentrarGpsSolicitud((valor) => valor + 1)}
+            onClick={verBusYMiUbicacion}
             className="rt-mini-pill"
             style={{ marginTop: 8, background: "#facc15", color: "#422006" }}
           >
-            Ver GPS Bus 01
+            Ver bus y mi ubicación
           </button>
         )}
       </div>
@@ -2233,20 +2295,15 @@ export default function Mapa({
             <small>Kilómetros</small>
             <b>{kilometrosUsuario.toFixed(2)}</b>
           </span>
+          {mostrarControlesGpsBusPasajero && distanciaGpsBus01Metros !== null && (
+            <span>
+              <small>GPS Bus 01</small>
+              <b>{formatearDistanciaBus(distanciaGpsBus01Metros)}</b>
+            </span>
+          )}
         </div>
 
         <div className="rt-trip-actions">
-          {gpsBus01Seleccionado && (
-            <button
-              type="button"
-              onClick={() => setCentrarGpsSolicitud((valor) => valor + 1)}
-              className="rt-trip-button rt-trip-button--ghost"
-              style={{ background: "#facc15", color: "#422006" }}
-            >
-              Ver GPS Bus 01
-            </button>
-          )}
-
           <button
             type="button"
             onClick={() => setMostrarDetalleKm((prev) => !prev)}
@@ -2537,6 +2594,7 @@ export default function Mapa({
           centrarRutaSolicitud={centrarRutaSolicitud}
           gpsDestino={gpsBus01Seleccionado}
           centrarGpsSolicitud={centrarGpsSolicitud}
+          centrarUsuarioYGpsSolicitud={centrarUsuarioYGpsSolicitud}
         />
 
         <TileLayer
@@ -2548,6 +2606,18 @@ export default function Mapa({
           <Marker position={ubicacion} icon={miUbicacionIcon} zIndexOffset={800}>
             <Popup>Estás aquí</Popup>
           </Marker>
+        )}
+
+        {ubicacion && posicionGpsBus01 && (
+          <Polyline
+            positions={[ubicacion, posicionGpsBus01]}
+            pathOptions={{
+              color: "#facc15",
+              weight: 3,
+              opacity: 0.68,
+              dashArray: "8 10",
+            }}
+          />
         )}
 
         {lugaresActivos &&

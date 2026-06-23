@@ -842,8 +842,16 @@ button {
 .rt-floating-controls {
   position: absolute;
   right: max(14px, env(safe-area-inset-right));
-  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 188px);
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 330px);
   z-index: 99999;
+}
+
+/* En modo chofer el panel inferior es mas corto: los controles bajan. */
+.rt-floating-controls--compact {
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 188px);
+}
+
+.rt-floating-controls {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -905,7 +913,7 @@ button {
 .rt-nearby-card {
   position: absolute;
   left: max(12px, env(safe-area-inset-left));
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 206px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 348px);
   z-index: 99999;
   width: min(330px, calc(100vw - 150px));
   border: 1px solid rgba(125, 211, 252, 0.18);
@@ -967,7 +975,7 @@ button {
 .rt-nearby-debug {
   position: absolute;
   left: max(12px, env(safe-area-inset-left));
-  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 338px);
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 480px);
   z-index: 99999;
   border: 1px solid rgba(34, 211, 238, 0.2);
   border-radius: 999px;
@@ -1117,6 +1125,174 @@ button {
   }
 }
 
+/* Fase 1: chip de estado y CTA "Ver ruta" en las tarjetas de ruta. */
+.rt-route-card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rt-route-card--north .rt-route-card__meta .rt-route-card__status--on,
+.rt-route-card--tampico .rt-route-card__meta .rt-route-card__status--on {
+  border-color: #16a34a;
+  background: rgba(34, 197, 94, 0.92);
+  color: #ffffff;
+}
+
+.rt-route-card--north .rt-route-card__meta .rt-route-card__status--off,
+.rt-route-card--tampico .rt-route-card__meta .rt-route-card__status--off {
+  border-color: rgba(100, 116, 139, 0.85);
+  background: rgba(100, 116, 139, 0.82);
+  color: #f8fafc;
+}
+
+.rt-route-card__cta {
+  align-self: flex-start;
+  border-radius: 999px;
+  font-weight: 1000;
+  letter-spacing: -0.01em;
+}
+
+.rt-route-card--tampico .rt-route-card__cta {
+  border: 3px solid #111827;
+  background: #111827;
+  color: #ffffff;
+  font-size: 12px;
+  padding: 5px 12px;
+  box-shadow: 2px 3px 0 rgba(17, 24, 39, 0.55);
+}
+
+.rt-route-card--north .rt-route-card__cta {
+  border: 1px solid rgba(103, 232, 249, 0.6);
+  background: rgba(6, 182, 212, 0.28);
+  color: #e0f2fe;
+  font-size: 11px;
+  padding: 5px 11px;
+  box-shadow: 0 0 16px rgba(34, 211, 238, 0.42);
+}
+
+/* Fase 3 + 5: estado del autobus mas cercano dentro del panel inferior. */
+.rt-bus-status {
+  margin-top: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.62);
+  padding: 10px 12px;
+}
+
+.rt-bus-status__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rt-bus-status__head strong {
+  color: #86efac;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.rt-bus-status__dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+  animation: rt-bus-pulse 2.2s ease-out infinite;
+}
+
+.rt-bus-status__count {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.rt-bus-status__dist {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  margin-top: 6px;
+}
+
+.rt-bus-status__time {
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.rt-bus-status__hint {
+  display: block;
+  color: #fcd34d;
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.rt-bus-status__empty {
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/* Fase 4: acciones del pasajero en el panel inferior. */
+.rt-route-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.rt-route-action {
+  min-height: 44px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 900;
+  line-height: 1.1;
+  padding: 0 10px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.2);
+}
+
+.rt-route-action--waiting {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+}
+
+.rt-route-action--waiting.rt-route-action--on {
+  background: linear-gradient(135deg, #0f766e, #10b981);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+.rt-route-action--report {
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.rt-route-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.rt-route-action-msg {
+  margin-top: 8px;
+  border: 1px solid rgba(94, 234, 212, 0.22);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #5eead4;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 8px 10px;
+  text-align: center;
+}
+
 @media (max-width: 520px) {
   .rt-route-list-screen {
     padding-left: 12px;
@@ -1231,8 +1407,12 @@ button {
   }
 
   .rt-floating-controls {
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 190px);
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 326px);
     gap: 8px;
+  }
+
+  .rt-floating-controls--compact {
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 188px);
   }
 
   .rt-fab {
@@ -1243,13 +1423,13 @@ button {
   }
 
   .rt-nearby-card {
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 196px);
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 332px);
     width: min(280px, calc(100vw - 138px));
     padding: 10px 11px;
   }
 
   .rt-nearby-debug {
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 320px);
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 456px);
     font-size: 10px;
   }
 }

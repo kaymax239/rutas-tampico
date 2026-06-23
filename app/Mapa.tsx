@@ -278,6 +278,27 @@ function formatearEtaBus(distanciaEnMetros: number) {
   return `${minutos} min`;
 }
 
+// Texto "hace X segundos/minutos" a partir del momento de la ultima
+// actualizacion real del autobus. Si no hay dato, no se inventa nada.
+function formatearHaceTiempo(actualizadoMs: number | null, ahoraMs: number) {
+  if (!actualizadoMs) return "Sin actualización reciente";
+
+  const segundos = Math.max(0, Math.round((ahoraMs - actualizadoMs) / 1000));
+
+  if (segundos < 60) return `Última actualización hace ${segundos} s`;
+
+  const minutos = Math.round(segundos / 60);
+
+  return `Última actualización hace ${minutos} min`;
+}
+
+function formatearDistanciaCorta(distancia: number | null) {
+  if (distancia === null) return "Distancia no disponible";
+  if (distancia < 1000) return `Bus a ${Math.round(distancia)} metros`;
+
+  return `Bus a ${(distancia / 1000).toFixed(2)} km`;
+}
+
 function calcularDistanciaRutaKm(puntos: [number, number][]) {
   if (puntos.length < 2) return 0;
 
@@ -1528,6 +1549,23 @@ export default function Mapa({
   const [conteoClicksNegocio, setConteoClicksNegocio] = useState<
     Record<string, number>
   >({});
+  // Reloj que avanza cada segundo para refrescar "hace X segundos" del bus.
+  const [ahora, setAhora] = useState(() => Date.now());
+  const [esperandoRuta, setEsperandoRuta] = useState(false);
+  const [reportandoPaso, setReportandoPaso] = useState(false);
+  const [mensajeAccionRuta, setMensajeAccionRuta] = useState("");
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => setAhora(Date.now()), 1000);
+
+    return () => window.clearInterval(intervalo);
+  }, []);
+
+  // Al cambiar de ruta se reinicia el estado de las acciones del panel.
+  useEffect(() => {
+    setEsperandoRuta(false);
+    setMensajeAccionRuta("");
+  }, [rutaSeleccionada]);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1687,6 +1725,31 @@ export default function Mapa({
     });
   }, [tipoRutaSeleccionado, zonaSeleccionada]);
 
+  // Conjunto de rutas que tienen actividad real ahora mismo: un autobus en
+  // vivo (coleccion "autobuses") o un GPS externo asignado a esa ruta.
+  const rutasConActividad = useMemo(() => {
+    const activas = new Set<string>();
+
+    for (const ruta of rutas) {
+      const tieneBusEnVivo = buses.some(
+        (b) =>
+          b.nombre?.toLowerCase().includes(ruta.nombre.toLowerCase()) ||
+          b.ruta?.toLowerCase().includes(ruta.nombre.toLowerCase())
+      );
+      const tieneGpsExterno = GPS_EXTERNOS.some(
+        (gps) =>
+          gps.zona === ruta.zona &&
+          normalizarNombreRuta(gps.ruta) === normalizarNombreRuta(ruta.nombre)
+      );
+
+      if (tieneBusEnVivo || tieneGpsExterno) {
+        activas.add(ruta.nombre);
+      }
+    }
+
+    return activas;
+  }, [buses]);
+
   const busesFiltrados = useMemo(() => {
     if (!rutaSeleccionada) return [];
 
@@ -1696,6 +1759,42 @@ export default function Mapa({
         b.ruta?.toLowerCase().includes(rutaSeleccionada.toLowerCase())
     );
   }, [buses, rutaSeleccionada]);
+
+  // Autobus en vivo mas cercano a la ubicacion del usuario en la ruta activa.
+  // Solo usa datos reales: si no hay ubicacion, la distancia queda en null y no
+  // se inventa ninguna posicion.
+  const infoBusCercano = useMemo(() => {
+    if (busesFiltrados.length === 0) return null;
+
+    let mejor: {
+      bus: Bus;
+      distancia: number | null;
+      actualizadoMs: number | null;
+    } | null = null;
+
+    for (const bus of busesFiltrados) {
+      const distancia = ubicacion
+        ? distanciaMetros(ubicacion, [bus.lat, bus.lng])
+        : null;
+      const actualizadoMs = bus.fecha?.toDate
+        ? bus.fecha.toDate().getTime()
+        : null;
+
+      if (!mejor) {
+        mejor = { bus, distancia, actualizadoMs };
+        continue;
+      }
+
+      if (
+        distancia !== null &&
+        (mejor.distancia === null || distancia < mejor.distancia)
+      ) {
+        mejor = { bus, distancia, actualizadoMs };
+      }
+    }
+
+    return mejor;
+  }, [busesFiltrados, ubicacion]);
 
   const gpsExternosFiltrados = useMemo(() => {
     if (!rutaSeleccionada) return [];
@@ -1746,6 +1845,9 @@ export default function Mapa({
       : null;
   const mostrarControlesGpsBusPasajero =
     modoUsuario === "pasajero" && Boolean(gpsBus01Seleccionado);
+  // Hay actividad real en la ruta si existe un autobus en vivo o el GPS externo.
+  const hayBusActivo =
+    busesFiltrados.length > 0 || Boolean(gpsBus01Seleccionado);
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -1837,6 +1939,57 @@ export default function Mapa({
     if (!rutaMapaSeleccionada) return;
 
     setCentrarRutaSolicitud((valor) => valor + 1);
+  };
+
+  // "Estoy esperando esta ruta": confirmacion local. La presencia del usuario en
+  // la ruta ya se registra en el contador (hook useUserPresence en page.tsx),
+  // asi que aqui solo damos retroalimentacion visible sin tocar Firestore.
+  const toggleEsperandoRuta = () => {
+    setEsperandoRuta((activo) => {
+      const nuevo = !activo;
+      setMensajeAccionRuta(
+        nuevo
+          ? "Listo, marcaste que estás esperando esta ruta."
+          : "Dejaste de esperar esta ruta."
+      );
+
+      return nuevo;
+    });
+  };
+
+  // "Reportar que ya pasó": se guarda en la coleccion "sugerencias" (permitida
+  // por las reglas de Firestore actuales) con un tipo distintivo, para no crear
+  // una coleccion nueva que quedaria bloqueada por reglas.
+  const reportarQueYaPaso = async () => {
+    if (reportandoPaso) return;
+
+    if (!rutaSeleccionada) {
+      setMensajeAccionRuta("Selecciona una ruta antes de reportar.");
+      return;
+    }
+
+    setReportandoPaso(true);
+    setMensajeAccionRuta("Enviando tu reporte...");
+
+    try {
+      await addDoc(collection(db, "sugerencias"), {
+        tipo: "reporte_paso",
+        origen: "mapa_pasajero",
+        ruta: rutaSeleccionada,
+        zona: zonaSeleccionada,
+        comentario: "El usuario reporta que el autobús ya pasó.",
+        latUsuario: ubicacion?.[0] ?? null,
+        lngUsuario: ubicacion?.[1] ?? null,
+        fecha: serverTimestamp(),
+      });
+
+      setMensajeAccionRuta("Gracias. Registramos que el bus ya pasó.");
+    } catch (error) {
+      console.error("No se pudo registrar el reporte de paso", error);
+      setMensajeAccionRuta("No se pudo enviar el reporte. Intenta otra vez.");
+    } finally {
+      setReportandoPaso(false);
+    }
   };
 
   const registrarClickNegocio = async (
@@ -2184,6 +2337,7 @@ export default function Mapa({
 
           {rutasDeZona.map((ruta, index) => {
             const usuariosRuta = conteoUsuariosPorRuta[ruta.nombre] || 0;
+            const enServicio = rutasConActividad.has(ruta.nombre);
 
             return (
               <button
@@ -2204,7 +2358,20 @@ export default function Mapa({
                 <span className="rt-route-card__content">
                   <span className="rt-route-card__name">{ruta.nombre}</span>
                   <span className="rt-route-card__meta">
+                    <span
+                      className={
+                        enServicio
+                          ? "rt-route-card__status rt-route-card__status--on"
+                          : "rt-route-card__status rt-route-card__status--off"
+                      }
+                    >
+                      {enServicio ? "● En servicio" : "○ Sin actividad"}
+                    </span>
+                    <span>📍 {obtenerEtiquetaZona(ruta.zona)}</span>
                     <span>{usuariosRuta} usuarios en esta ruta</span>
+                  </span>
+                  <span className="rt-route-card__cta" aria-hidden="true">
+                    Ver ruta →
                   </span>
                 </span>
                 {esZonaNorteSeleccionada ? (
@@ -2324,6 +2491,87 @@ export default function Mapa({
           )}
         </div>
 
+        {modoUsuario === "pasajero" && (
+          <div className="rt-bus-status">
+            {hayBusActivo ? (
+              infoBusCercano ? (
+                <>
+                  <div className="rt-bus-status__head">
+                    <span className="rt-bus-status__dot" aria-hidden="true" />
+                    <strong>Chofer activo</strong>
+                    {busesFiltrados.length > 1 && (
+                      <span className="rt-bus-status__count">
+                        {busesFiltrados.length} en ruta · más cercano
+                      </span>
+                    )}
+                  </div>
+                  <div className="rt-bus-status__dist">
+                    {formatearDistanciaCorta(infoBusCercano.distancia)}
+                  </div>
+                  <div className="rt-bus-status__time">
+                    {formatearHaceTiempo(infoBusCercano.actualizadoMs, ahora)}
+                  </div>
+                  {infoBusCercano.distancia === null && (
+                    <small className="rt-bus-status__hint">
+                      Activa “Mi ubicación” para ver la distancia exacta.
+                    </small>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="rt-bus-status__head">
+                    <span className="rt-bus-status__dot" aria-hidden="true" />
+                    <strong>Bus con GPS activo</strong>
+                  </div>
+                  <div className="rt-bus-status__time">
+                    Ubicación por GPS de la ruta. Distancia y ETA arriba 👆
+                  </div>
+                  {distanciaGpsBus01Metros === null && (
+                    <small className="rt-bus-status__hint">
+                      Activa “Mi ubicación” para ver la distancia al bus.
+                    </small>
+                  )}
+                </>
+              )
+            ) : (
+              <div className="rt-bus-status__empty">
+                No hay autobús activo en esta ruta por ahora.
+              </div>
+            )}
+          </div>
+        )}
+
+        {modoUsuario === "pasajero" && (
+          <div className="rt-route-actions">
+            <button
+              type="button"
+              onClick={toggleEsperandoRuta}
+              className={
+                esperandoRuta
+                  ? "rt-route-action rt-route-action--waiting rt-route-action--on"
+                  : "rt-route-action rt-route-action--waiting"
+              }
+            >
+              {esperandoRuta
+                ? "✓ Esperando esta ruta"
+                : "Estoy esperando esta ruta"}
+            </button>
+
+            <button
+              type="button"
+              onClick={reportarQueYaPaso}
+              disabled={reportandoPaso}
+              className="rt-route-action rt-route-action--report"
+            >
+              {reportandoPaso ? "Enviando..." : "Reportar que ya pasó"}
+            </button>
+          </div>
+        )}
+
+        {modoUsuario === "pasajero" && mensajeAccionRuta && (
+          <div className="rt-route-action-msg">{mensajeAccionRuta}</div>
+        )}
+
         <div className="rt-trip-actions">
           <button
             type="button"
@@ -2363,7 +2611,13 @@ export default function Mapa({
         )}
       </div>
 
-      <div className="rt-floating-controls">
+      <div
+        className={
+          modoUsuario === "pasajero"
+            ? "rt-floating-controls"
+            : "rt-floating-controls rt-floating-controls--compact"
+        }
+      >
         <button
           type="button"
           onClick={onRegresarInicio}
@@ -2622,6 +2876,32 @@ export default function Mapa({
           attribution={MAPA_PROFESIONAL.attribution}
           url={MAPA_PROFESIONAL.url}
         />
+
+        {/* Solo se dibuja la ruta seleccionada para no saturar el mapa. */}
+        {rutaMapaSeleccionada && rutaMapaSeleccionada.puntos.length > 1 && (
+          <>
+            <Polyline
+              positions={rutaMapaSeleccionada.puntos}
+              pathOptions={{
+                color: "#0f172a",
+                weight: 9,
+                opacity: 0.45,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+            <Polyline
+              positions={rutaMapaSeleccionada.puntos}
+              pathOptions={{
+                color: rutaMapaSeleccionada.color,
+                weight: 5,
+                opacity: 0.95,
+                lineCap: "round",
+                lineJoin: "round",
+              }}
+            />
+          </>
+        )}
 
         {ubicacion && (
           <Marker position={ubicacion} icon={miUbicacionIcon} zIndexOffset={800}>

@@ -251,7 +251,17 @@ export default function Home() {
           }}
         >
           <h1 style={{ color: "white", fontSize: 30, fontWeight: 800 }}>
-            🚍 Rutas Kaymax
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+              <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="14" rx="2" />
+                <path d="M4 11h16" />
+                <path d="M8 17v2" />
+                <path d="M16 17v2" />
+                <circle cx="8" cy="14" r="1" />
+                <circle cx="16" cy="14" r="1" />
+              </svg>
+              Rutas Kaymax
+            </span>
           </h1>
 
           <p style={{ color: "#cbd5e1", marginBottom: 16 }}>
@@ -269,8 +279,16 @@ export default function Home() {
               marginBottom: 4,
             }}
           >
-            👥 Usuarios en línea:{" "}
-            {usuariosEnLinea.loading ? "..." : usuariosEnLinea.total}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              Usuarios en línea:{" "}
+              {usuariosEnLinea.loading ? "..." : usuariosEnLinea.total}
+            </span>
           </div>
 
           <button
@@ -287,7 +305,17 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            🚌 Soy Chofer
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="14" rx="2" />
+                <path d="M4 11h16" />
+                <path d="M8 17v2" />
+                <path d="M16 17v2" />
+                <circle cx="8" cy="14" r="1" />
+                <circle cx="16" cy="14" r="1" />
+              </svg>
+              Soy Chofer
+            </span>
           </button>
 
           <button
@@ -304,7 +332,13 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            👤 Soy Pasajero
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              Soy Pasajero
+            </span>
           </button>
 
           <button
@@ -321,7 +355,13 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            🛡️ Pasajero Seguro
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+              Pasajero Seguro
+            </span>
           </button>
 
           <button
@@ -338,7 +378,14 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            🚨 911
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+              911
+            </span>
           </button>
 
           <button
@@ -355,7 +402,14 @@ export default function Home() {
               cursor: "pointer",
             }}
           >
-            💡 Sugerir ruta / comentarios
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 18h6" />
+                <path d="M10 22h4" />
+                <path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z" />
+              </svg>
+              Sugerir ruta / comentarios
+            </span>
           </button>
 
           {mostrarSugerencia && (

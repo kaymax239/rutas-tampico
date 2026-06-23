@@ -108,7 +108,8 @@ const USUARIO_KM_INICIAL: UsuarioKm = {
   ultimoViaje: null,
 };
 const MAPA_PROFESIONAL = {
-  url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+  // CartoDB Dark Matter (mismas capas y comportamiento; solo cambia el estilo).
+  url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
   attribution: "&copy; OpenStreetMap &copy; CARTO",
 };
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -338,17 +339,31 @@ function obtenerTipoRuta(ruta: Ruta): TipoRuta {
   return /^ruta\s+\d+/i.test(ruta.nombre) ? "urbano" : "micro-local";
 }
 
-function obtenerIconoLugar(categoria: CategoriaLugar) {
-  if (categoria === "restaurant") return "🍽";
-  if (categoria === "fast_food") return "🍔";
-  if (categoria === "convenience") return "🏪";
-  if (categoria === "supermarket") return "🛒";
-  if (categoria === "shop") return "🛍";
-  if (categoria === "pharmacy") return "✚";
-  if (categoria === "cafe") return "☕";
-  if (categoria === "bar" || categoria === "pub") return "●";
+// Iconos de categoría como SVG inline (estilo lucide, stroke=currentColor).
+// Sustituyen a los emojis previos sin cambiar categorías ni comportamiento.
+const ICONOS_LUGAR: Record<string, string> = {
+  restaurant:
+    '<path d="M4 3v6a2 2 0 0 0 4 0V3"/><path d="M6 11v10"/><path d="M18 3c-1.7 0-3 2-3 5s1 4 3 4v9"/>',
+  fast_food:
+    '<path d="M4 11a8 8 0 0 1 16 0"/><path d="M3 11h18"/><path d="M5 15h14a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3Z"/>',
+  convenience:
+    '<path d="M4 9v11h16V9"/><path d="M3 4h18l1.4 4.2a3 3 0 0 1-5.8 1 3 3 0 0 1-5.9 0 3 3 0 0 1-5.8-1Z"/>',
+  supermarket:
+    '<circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/><path d="M2 3h2l2.4 12.5a2 2 0 0 0 2 1.5h7.7a2 2 0 0 0 2-1.5L21 7H5"/>',
+  shop:
+    '<path d="M6 2 3 6v14a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  pharmacy: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  cafe:
+    '<path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path d="M6 2v2"/><path d="M10 2v2"/>',
+  bar: '<path d="M8 22h8"/><path d="M12 11v11"/><path d="m19 3-7 8-7-8Z"/>',
+  pub: '<path d="M8 22h8"/><path d="M12 11v11"/><path d="m19 3-7 8-7-8Z"/>',
+};
 
-  return "•";
+function obtenerIconoLugar(categoria: CategoriaLugar) {
+  const inner =
+    ICONOS_LUGAR[categoria] || '<circle cx="12" cy="12" r="4"/>';
+
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 }
 
 function crearDescripcionLugar(lugar: LugarCercano) {
@@ -2291,12 +2306,30 @@ export default function Mapa({
               marginBottom: 10,
             }}
           >
-            <span>📍 {negocioSeleccionado.distanciaMetros} m de ti</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              {negocioSeleccionado.distanciaMetros} m de ti
+            </span>
             {typeof negocioSeleccionado.rating === "number" && (
-              <span>⭐ {negocioSeleccionado.rating.toFixed(1)} en Google</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                  <path d="m12 2 2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 9l6.8-.6Z" />
+                </svg>
+                {negocioSeleccionado.rating.toFixed(1)} en Google
+              </span>
             )}
-            <span>
-              👆 {conteoClicksNegocio[negocioSeleccionado.id] || 0} clics en esta sesión
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m9 9 5 12 1.8-5.2L21 14Z" />
+                <path d="M7.2 2.2 8 5.1" />
+                <path d="m5.1 7.2-2.9.8" />
+                <path d="M14 4.1 12 6" />
+                <path d="m6 12-1.9 2" />
+              </svg>
+              {conteoClicksNegocio[negocioSeleccionado.id] || 0} clics en esta sesión
             </span>
           </div>
 

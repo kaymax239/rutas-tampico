@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* Premium UI — paleta consolidada (Fase 1). Reduce la cantidad de acentos
+   a una base neutra oscura + un acento teal de marca + estados. */
+:root {
+  --rt-font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --rt-bg: #0b1120;
+  --rt-surface: rgba(15, 23, 42, 0.82);
+  --rt-surface-2: rgba(15, 23, 42, 0.62);
+  --rt-border: rgba(148, 163, 184, 0.16);
+  --rt-text: #f1f5f9;
+  --rt-text-dim: #94a3b8;
+  --rt-accent: #2dd4bf;
+  --rt-accent-soft: rgba(45, 212, 191, 0.16);
+  --rt-positive: #34d399;
+  --rt-danger: #f97316;
+  --rt-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 html,
 body {
   margin: 0;
@@ -7,8 +24,15 @@ body {
   background: #020617;
 }
 
+body {
+  font-family: var(--rt-font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
 button {
   -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
 }
 
 .rt-zone-button {
@@ -571,10 +595,11 @@ button {
   font-family: inherit;
 }
 
+/* CartoDB Dark Matter ya es un basemap oscuro: sin invertir, solo un
+   realce sutil para mejor contraste con marcadores y rutas. */
 .rt-map-shell .leaflet-tile-pane {
-  filter: invert(0.9) hue-rotate(180deg) saturate(0.72) contrast(0.9)
-    brightness(0.82);
-  opacity: 0.98;
+  filter: brightness(1.04) contrast(1.05) saturate(1.04);
+  opacity: 1;
 }
 
 .rt-map-shell .leaflet-overlay-pane svg path {
@@ -587,6 +612,67 @@ button {
   border-radius: 999px 0 0 0;
   font-size: 10px;
   opacity: 0.78;
+}
+
+/* Popups premium: aplica a TODOS los popups del mapa principal (misma info,
+   solo rediseño visual). Acotado a .rt-map-shell para no afectar otros mapas. */
+.rt-map-shell .leaflet-popup-content-wrapper {
+  border: 1px solid var(--rt-border);
+  border-radius: 16px;
+  background: linear-gradient(150deg, rgba(2, 6, 23, 0.96), rgba(15, 23, 42, 0.94));
+  color: var(--rt-text);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+}
+
+.rt-map-shell .leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.rt-map-shell .leaflet-popup-content b {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.rt-map-shell .leaflet-popup-tip {
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid var(--rt-border);
+  box-shadow: none;
+}
+
+.rt-map-shell .leaflet-popup-close-button {
+  width: 26px;
+  height: 26px;
+  padding: 3px 0 0;
+  color: var(--rt-text-dim);
+  font-size: 18px;
+  transition: color 140ms var(--rt-ease), transform 140ms var(--rt-ease);
+}
+
+.rt-map-shell .leaflet-popup-close-button:hover {
+  color: #ffffff;
+  transform: scale(1.12);
+}
+
+/* Animación de apertura del popup */
+.rt-map-shell .leaflet-popup {
+  animation: rt-popup-in 200ms var(--rt-ease);
+}
+
+@keyframes rt-popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .rt-map-panel {
@@ -1099,6 +1185,96 @@ button {
   box-shadow: 0 0 18px rgba(15, 118, 110, 0.78);
 }
 
+/* ============================================================= *
+ * Premium UI — interacciones, jerarquía y microanimaciones (Fase 1)
+ * Solo capa visual; no altera estructura, datos ni eventos.
+ * ============================================================= */
+
+/* Entrada suave del panel superior y del bottom sheet (tipo Uber/Moovit) */
+.rt-map-panel {
+  animation: rt-panel-in 320ms var(--rt-ease) both;
+}
+
+.rt-bottom-sheet {
+  padding-top: 16px;
+  animation: rt-sheet-in 360ms var(--rt-ease) both;
+}
+
+/* Asa de arrastre visual del bottom sheet */
+.rt-bottom-sheet::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.45);
+  transform: translateX(-50%);
+}
+
+/* Mejor jerarquía: acento de marca consolidado en kickers/labels */
+.rt-route-kicker,
+.rt-bottom-sheet__label {
+  color: var(--rt-accent);
+}
+
+/* Microinteracciones de botones flotantes, pills y acciones */
+.rt-fab,
+.rt-mini-pill,
+.rt-trip-button {
+  transition:
+    transform 160ms var(--rt-ease),
+    box-shadow 160ms var(--rt-ease),
+    filter 160ms var(--rt-ease);
+  will-change: transform;
+}
+
+.rt-fab:not(:disabled):hover,
+.rt-mini-pill:not(:disabled):hover,
+.rt-trip-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.rt-fab:not(:disabled):active,
+.rt-mini-pill:not(:disabled):active,
+.rt-trip-button:not(:disabled):active {
+  transform: translateY(0) scale(0.97);
+  filter: brightness(0.98);
+}
+
+/* Marcadores de lugares ahora usan iconos SVG (no emojis) */
+.rt-place-marker svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+}
+
+@keyframes rt-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rt-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes rt-bus-pulse {
   0% {
     opacity: 0.75;
@@ -1258,7 +1434,16 @@ button {
     transition: none;
   }
 
-  .rt-bus-marker__pulse {
+  .rt-bus-marker__pulse,
+  .rt-map-panel,
+  .rt-bottom-sheet,
+  .rt-map-shell .leaflet-popup {
     animation: none;
+  }
+
+  .rt-fab,
+  .rt-mini-pill,
+  .rt-trip-button {
+    transition: none;
   }
 }

@@ -1598,3 +1598,75 @@ button {
   background: linear-gradient(135deg, #15803d, #22c55e);
   color: #052e16;
 }
+
+/* Panel básico de métricas mensuales (resumen para el negocio) */
+.rt-metricas-panel {
+  margin: 4px 0 12px;
+  border: 1px solid var(--rt-border);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.55);
+  padding: 12px;
+}
+
+.rt-metricas-panel__title {
+  display: block;
+  color: var(--rt-accent);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rt-metricas-panel__lead {
+  margin: 6px 0 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.rt-metricas-panel__lead strong {
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.rt-metricas-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.rt-metricas-panel__grid div {
+  border: 1px solid var(--rt-border);
+  border-radius: 12px;
+  background: var(--rt-surface-2);
+  padding: 7px 6px;
+  text-align: center;
+}
+
+.rt-metricas-panel__grid small {
+  display: block;
+  color: var(--rt-text-dim);
+  font-size: 9px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.rt-metricas-panel__grid b {
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.rt-metricas-panel__note {
+  display: block;
+  margin-top: 8px;
+  color: var(--rt-text-dim);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .rt-metricas-panel__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

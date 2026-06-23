@@ -15,9 +15,12 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
+  increment,
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  setDoc,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -397,6 +400,103 @@ function IconoCategoriaSVG({
 // URL de "Cómo llegar" (direcciones Google Maps) a partir de coordenadas.
 function urlComoLlegar(lat: number, lng: number) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+}
+
+/* ----------------------------------------------------------------- *
+ * Métricas mensuales de Negocios Cercanos (preparación de monetización).
+ * Estructura Firestore: colección "negociosMetricas", un doc por
+ * negocio y periodo (id = `${placeId}_${AAAA-MM}`), con contadores
+ * incrementales. NO activa cobros; solo acumula datos.
+ * ----------------------------------------------------------------- */
+const COLECCION_METRICAS_NEGOCIOS = "negociosMetricas";
+
+const MESES_ES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+];
+
+type TipoMetricaNegocio =
+  | "vistas"
+  | "clicsPopup"
+  | "clicsComoLlegar"
+  | "clicsLlamar";
+
+type MetricaNegocio = {
+  vistas?: number;
+  clicsPopup?: number;
+  clicsComoLlegar?: number;
+  clicsLlamar?: number;
+  total?: number;
+  periodo?: string;
+};
+
+// Periodo mensual actual: clave AAAA-MM + etiqueta legible (mes actual–mes siguiente).
+function periodoNegocios(fecha = new Date()) {
+  const anio = fecha.getFullYear();
+  const mes = fecha.getMonth(); // 0-11
+  const key = `${anio}-${String(mes + 1).padStart(2, "0")}`;
+  const etiqueta = `${MESES_ES[mes]}–${MESES_ES[(mes + 1) % 12]}`;
+  return { key, etiqueta };
+}
+
+function idMetricaNegocio(placeId: string, periodoKey: string) {
+  return `${placeId}_${periodoKey}`;
+}
+
+// Orígenes posibles de interacción con un negocio.
+type OrigenClickNegocio =
+  | "tarjeta"
+  | "marcador"
+  | "popup"
+  | "comollegar"
+  | "llamar";
+
+// Mapea el origen del click a su contador mensual.
+function tipoMetricaPorOrigen(origen: OrigenClickNegocio): TipoMetricaNegocio {
+  if (origen === "comollegar") return "clicsComoLlegar";
+  if (origen === "llamar") return "clicsLlamar";
+  return "clicsPopup";
+}
+
+// Acumula (incrementa) la métrica mensual del negocio. Sin cobros.
+async function acumularMetricaNegocio(
+  lugar: LugarCercano,
+  tipo: TipoMetricaNegocio
+) {
+  try {
+    const { key } = periodoNegocios();
+    const ref = doc(
+      db,
+      COLECCION_METRICAS_NEGOCIOS,
+      idMetricaNegocio(lugar.id, key)
+    );
+
+    await setDoc(
+      ref,
+      {
+        placeId: lugar.id,
+        nombre: lugar.nombre,
+        categoria: lugar.categoria,
+        periodo: key,
+        [tipo]: increment(1),
+        total: increment(1),
+        actualizado: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error("No se pudo acumular la métrica del negocio", error);
+  }
 }
 
 function crearDescripcionLugar(lugar: LugarCercano) {
@@ -1410,6 +1510,11 @@ export default function Mapa({
   const [conteoClicksNegocio, setConteoClicksNegocio] = useState<
     Record<string, number>
   >({});
+  // Métricas mensuales: impresiones ya registradas en esta sesión + resumen del negocio abierto.
+  const vistasRegistradasRef = useRef<Set<string>>(new Set());
+  const [metricaNegocio, setMetricaNegocio] = useState<MetricaNegocio | null>(
+    null
+  );
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "autobuses"), (snapshot) => {
@@ -1600,6 +1705,48 @@ export default function Mapa({
       .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
       .slice(0, 3);
   }, [lugaresCercanos, ubicacion]);
+
+  // Impresiones ("vistas"): una por negocio por sesión, hacia la métrica mensual.
+  useEffect(() => {
+    if (lugaresCercanosVisibles.length === 0) return;
+
+    lugaresCercanosVisibles.forEach((lugar) => {
+      if (vistasRegistradasRef.current.has(lugar.id)) return;
+      vistasRegistradasRef.current.add(lugar.id);
+      void acumularMetricaNegocio(lugar, "vistas");
+    });
+  }, [lugaresCercanosVisibles]);
+
+  // Resumen mensual del negocio abierto (lectura del agregado).
+  useEffect(() => {
+    if (!negocioSeleccionado) {
+      setMetricaNegocio(null);
+      return;
+    }
+
+    let activo = true;
+    const { key } = periodoNegocios();
+    const ref = doc(
+      db,
+      COLECCION_METRICAS_NEGOCIOS,
+      idMetricaNegocio(negocioSeleccionado.id, key)
+    );
+
+    getDoc(ref)
+      .then((snap) => {
+        if (!activo) return;
+        setMetricaNegocio(snap.exists() ? (snap.data() as MetricaNegocio) : {});
+      })
+      .catch((error) => {
+        console.error("No se pudo leer la métrica del negocio", error);
+        if (activo) setMetricaNegocio({});
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, [negocioSeleccionado]);
+
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -1669,7 +1816,7 @@ export default function Mapa({
 
   const registrarClickNegocio = async (
     lugar: LugarCercano,
-    origen: "tarjeta" | "marcador" | "popup"
+    origen: OrigenClickNegocio
   ) => {
     setNegocioSeleccionado(lugar);
     setConteoClicksNegocio((actual) => ({
@@ -1705,6 +1852,9 @@ export default function Mapa({
         userAgent: navigator.userAgent.slice(0, 200),
         fecha: serverTimestamp(),
       });
+
+      // Métrica mensual agregada (monetización; sin cobros).
+      await acumularMetricaNegocio(lugar, tipoMetricaPorOrigen(origen));
     } catch (error) {
       console.error("No se pudo registrar el click del negocio", error);
     }
@@ -2409,6 +2559,36 @@ export default function Mapa({
             </small>
           )}
 
+          <div className="rt-metricas-panel">
+            <span className="rt-metricas-panel__title">Resumen mensual</span>
+            <p className="rt-metricas-panel__lead">
+              En el periodo {periodoNegocios().etiqueta} tu negocio fue visto{" "}
+              <strong>{metricaNegocio?.vistas ?? 0}</strong> veces en Rutas
+              Tampico.
+            </p>
+            <div className="rt-metricas-panel__grid">
+              <div>
+                <small>Vistas</small>
+                <b>{metricaNegocio?.vistas ?? 0}</b>
+              </div>
+              <div>
+                <small>Clics popup</small>
+                <b>{metricaNegocio?.clicsPopup ?? 0}</b>
+              </div>
+              <div>
+                <small>Cómo llegar</small>
+                <b>{metricaNegocio?.clicsComoLlegar ?? 0}</b>
+              </div>
+              <div>
+                <small>Llamadas</small>
+                <b>{metricaNegocio?.clicsLlamar ?? 0}</b>
+              </div>
+            </div>
+            <span className="rt-metricas-panel__note">
+              Métricas para monetización · sin cobros activados
+            </span>
+          </div>
+
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <a
               href={urlComoLlegar(
@@ -2418,7 +2598,7 @@ export default function Mapa({
               target="_blank"
               rel="noreferrer"
               onClick={() =>
-                void registrarClickNegocio(negocioSeleccionado, "popup")
+                void registrarClickNegocio(negocioSeleccionado, "comollegar")
               }
               className="rt-biz-btn rt-biz-btn--primary"
             >
@@ -2432,7 +2612,7 @@ export default function Mapa({
               <a
                 href={`tel:${negocioSeleccionado.telefono}`}
                 onClick={() =>
-                  void registrarClickNegocio(negocioSeleccionado, "popup")
+                  void registrarClickNegocio(negocioSeleccionado, "llamar")
                 }
                 className="rt-biz-btn rt-biz-btn--call"
               >

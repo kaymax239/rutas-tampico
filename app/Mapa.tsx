@@ -96,6 +96,8 @@ type LugarCercano = {
   googleMapsUri?: string;
   telefono?: string;
   websiteUri?: string;
+  // Preparado para monetización: bandera visual de patrocinio (aún sin activar).
+  patrocinado?: boolean;
 };
 
 const USER_ID_STORAGE_KEY = "rutasKaymax.userId";
@@ -364,6 +366,37 @@ function obtenerIconoLugar(categoria: CategoriaLugar) {
     ICONOS_LUGAR[categoria] || '<circle cx="12" cy="12" r="4"/>';
 
   return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}
+
+// Versión JSX del icono de categoría (reutiliza ICONOS_LUGAR para no duplicar).
+function IconoCategoriaSVG({
+  categoria,
+  size = 16,
+}: {
+  categoria: CategoriaLugar;
+  size?: number;
+}) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{
+        __html: ICONOS_LUGAR[categoria] || '<circle cx="12" cy="12" r="4"/>',
+      }}
+    />
+  );
+}
+
+// URL de "Cómo llegar" (direcciones Google Maps) a partir de coordenadas.
+function urlComoLlegar(lat: number, lng: number) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
 function crearDescripcionLugar(lugar: LugarCercano) {
@@ -2204,7 +2237,9 @@ export default function Mapa({
                 {lugaresCercanosVisibles.map((lugar) => (
                   <div
                     key={lugar.id}
-                    className="rt-nearby-card__item"
+                    className={`rt-nearby-card__item rt-biz-card${
+                      lugar.patrocinado ? " rt-biz-card--sponsored" : ""
+                    }`}
                     role="button"
                     tabIndex={0}
                     onClick={() => void registrarClickNegocio(lugar, "tarjeta")}
@@ -2215,16 +2250,39 @@ export default function Mapa({
                       }
                     }}
                   >
-                    <strong>
-                      {lugar.nombre} – a {lugar.distanciaMetros} m
-                    </strong>
-                    <small>
-                      {ETIQUETAS_LUGARES[lugar.categoria]}
-                      {typeof lugar.rating === "number"
-                        ? ` · ⭐ ${lugar.rating.toFixed(1)}`
-                        : ""}
-                      {" · Toca para ver detalles"}
-                    </small>
+                    <span
+                      className={`rt-biz-card__icon rt-place-marker--${lugar.categoria}`}
+                      aria-hidden="true"
+                    >
+                      <IconoCategoriaSVG categoria={lugar.categoria} size={18} />
+                    </span>
+                    <div className="rt-biz-card__body">
+                      <div className="rt-biz-card__top">
+                        <strong>{lugar.nombre}</strong>
+                        {lugar.patrocinado && (
+                          <span className="rt-spon-badge">Patrocinado</span>
+                        )}
+                      </div>
+                      <div className="rt-biz-card__meta">
+                        <span className="rt-biz-card__pill">
+                          {lugar.distanciaMetros} m
+                        </span>
+                        <span>{ETIQUETAS_LUGARES[lugar.categoria]}</span>
+                        {typeof lugar.rating === "number" && (
+                          <span className="rt-biz-card__rating">
+                            <svg width={12} height={12} viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+                              <path d="m12 2 2.9 6.3 6.8.6-5.1 4.5 1.5 6.7L12 17l-6 3.6 1.5-6.7L2.4 9l6.8-.6Z" />
+                            </svg>
+                            {lugar.rating.toFixed(1)}
+                          </span>
+                        )}
+                        {(conteoClicksNegocio[lugar.id] || 0) > 0 && (
+                          <span className="rt-biz-card__clicks">
+                            {conteoClicksNegocio[lugar.id]} clics
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2275,18 +2333,22 @@ export default function Mapa({
             ×
           </button>
 
-          <span
-            style={{
-              color: "#5eead4",
-              display: "block",
-              fontSize: 12,
-              fontWeight: 900,
-              letterSpacing: ".12em",
-              textTransform: "uppercase",
-            }}
-          >
-            {ETIQUETAS_LUGARES[negocioSeleccionado.categoria]}
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span
+              style={{
+                color: "#5eead4",
+                fontSize: 12,
+                fontWeight: 900,
+                letterSpacing: ".12em",
+                textTransform: "uppercase",
+              }}
+            >
+              {ETIQUETAS_LUGARES[negocioSeleccionado.categoria]}
+            </span>
+            {negocioSeleccionado.patrocinado && (
+              <span className="rt-spon-badge">Patrocinado</span>
+            )}
+          </div>
           <h2 style={{ fontSize: 22, margin: "6px 42px 8px 0", fontWeight: 1000 }}>
             {negocioSeleccionado.nombre}
           </h2>
@@ -2348,6 +2410,39 @@ export default function Mapa({
           )}
 
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a
+              href={urlComoLlegar(
+                negocioSeleccionado.lat,
+                negocioSeleccionado.lng
+              )}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() =>
+                void registrarClickNegocio(negocioSeleccionado, "popup")
+              }
+              className="rt-biz-btn rt-biz-btn--primary"
+            >
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polygon points="3 11 22 2 13 21 11 13 3 11" />
+              </svg>
+              Cómo llegar
+            </a>
+
+            {negocioSeleccionado.telefono && (
+              <a
+                href={`tel:${negocioSeleccionado.telefono}`}
+                onClick={() =>
+                  void registrarClickNegocio(negocioSeleccionado, "popup")
+                }
+                className="rt-biz-btn rt-biz-btn--call"
+              >
+                <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.1a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
+                </svg>
+                Llamar
+              </a>
+            )}
+
             {negocioSeleccionado.googleMapsUri && (
               <a
                 href={negocioSeleccionado.googleMapsUri}

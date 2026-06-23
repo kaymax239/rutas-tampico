@@ -1446,4 +1446,155 @@ button {
   .rt-trip-button {
     transition: none;
   }
+
+  .rt-biz-card,
+  .rt-biz-btn {
+    transition: none;
+  }
+}
+
+/* ============================================================= *
+ * Negocios Cercanos — tarjetas premium + prep de monetización
+ * Solo capa visual; no toca pagos, Firestore ni la lógica de clics.
+ * ============================================================= */
+
+.rt-biz-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 14px;
+  padding: 9px;
+  cursor: pointer;
+  transition:
+    background 160ms var(--rt-ease),
+    transform 160ms var(--rt-ease);
+}
+
+.rt-biz-card:hover,
+.rt-biz-card:focus-visible {
+  background: rgba(148, 163, 184, 0.08);
+  outline: none;
+  transform: translateX(2px);
+}
+
+.rt-biz-card__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 11px;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.rt-biz-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.rt-biz-card__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rt-biz-card__top strong {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rt-biz-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--rt-text-dim);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rt-biz-card__pill {
+  border-radius: 999px;
+  background: var(--rt-accent-soft);
+  color: var(--rt-accent);
+  padding: 2px 8px;
+}
+
+.rt-biz-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #fcd34d;
+}
+
+.rt-biz-card__clicks {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  padding: 2px 8px;
+}
+
+.rt-biz-card--sponsored {
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.1), transparent 70%);
+  box-shadow: inset 2px 0 0 var(--rt-accent);
+}
+
+/* Badge "Patrocinado": preparado visualmente, SIN activar cobros.
+   Solo se muestra si el dato lugar.patrocinado === true (hoy nunca). */
+.rt-spon-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #1f1300;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+/* Botones de acción del negocio (Cómo llegar / Llamar) */
+.rt-biz-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 10px 14px;
+  text-decoration: none;
+  transition:
+    transform 150ms var(--rt-ease),
+    filter 150ms var(--rt-ease);
+}
+
+.rt-biz-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+}
+
+.rt-biz-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.rt-biz-btn--primary {
+  background: linear-gradient(135deg, #0f766e, var(--rt-accent));
+  color: #042f2a;
+}
+
+.rt-biz-btn--call {
+  background: linear-gradient(135deg, #15803d, #22c55e);
+  color: #052e16;
 }

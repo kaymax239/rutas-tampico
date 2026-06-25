@@ -33,6 +33,7 @@ import SeleccionSemanasAvance, {
   type SemanaAvanceSeleccionable,
 } from "./components/SeleccionSemanasAvance";
 import VistaPreviaAvance from "./components/VistaPreviaAvance";
+import PlaneacionIngles from "./components/PlaneacionIngles";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
@@ -57,6 +58,7 @@ type RangoSemanas = {
 };
 
 type PasoAvance = "captura" | "seleccion" | "preview";
+type VistaPrincipal = "general" | "ingles";
 
 const limpiarTema = (tema: string) => tema.trim().replace(/\.$/, "");
 
@@ -482,6 +484,8 @@ const construirDatosExamen = ({
 };
 
 export default function Home() {
+  const [vistaPrincipal, setVistaPrincipal] =
+    useState<VistaPrincipal>("general");
   const [carrera, setCarrera] = useState<"PN" | "MN">("PN");
   const [materiaSeleccionada, setMateriaSeleccionada] = useState("");
   const [semestreSeleccionado, setSemestreSeleccionado] = useState("");
@@ -607,6 +611,7 @@ export default function Home() {
     : "";
 
   const seleccionarCarrera = (c: "PN" | "MN") => {
+    setVistaPrincipal("general");
     setCarrera(c);
     setSemestreSeleccionado("");
     setMateriaSeleccionada("");
@@ -1254,7 +1259,15 @@ export default function Home() {
               </div>
             </div>
 
-            {!semestreSeleccionado ? (
+            {vistaPrincipal === "ingles" ? (
+              <PlaneacionIngles
+                onVolver={() => {
+                  setVistaPrincipal("general");
+                  setSemestreSeleccionado("");
+                  setMateriaSeleccionada("");
+                }}
+              />
+            ) : !semestreSeleccionado ? (
               <div className="px-6 py-10 sm:px-10">
                 <div className="rounded-3xl border border-dashed border-[#c8a45d] bg-[#fffaf0] p-6 text-center sm:p-8">
                   <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-[#071a33] text-xs font-black uppercase tracking-[0.18em] text-[#d7bd7a]">
@@ -1292,6 +1305,13 @@ export default function Home() {
                         {etiqueta}
                       </button>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => setVistaPrincipal("ingles")}
+                      className="rounded-2xl border border-[#071a33]/30 bg-white px-6 py-3 text-sm font-black uppercase tracking-[0.16em] text-[#071a33] shadow-sm transition hover:border-[#071a33]"
+                    >
+                      Inglés
+                    </button>
                   </div>
 
                   <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

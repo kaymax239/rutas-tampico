@@ -29,6 +29,10 @@ import {
 } from "./lib/construirPresentacionV2";
 import { temasDeUnidad } from "./data/presentaciones/temas";
 import type { PresentacionV2 } from "./data/presentaciones/tiposV2";
+import SeleccionSemanasAvance, {
+  type SemanaAvanceSeleccionable,
+} from "./components/SeleccionSemanasAvance";
+import VistaPreviaAvance from "./components/VistaPreviaAvance";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
@@ -52,15 +56,7 @@ type RangoSemanas = {
   fin: number;
 };
 
-const periodosAvance = [
-  { nombre: "Julio-Agosto", inicio: 0, fin: 4 },
-  { nombre: "Septiembre", inicio: 4, fin: 8 },
-  { nombre: "Octubre", inicio: 8, fin: 12 },
-  { nombre: "Noviembre", inicio: 12, fin: 16 },
-  { nombre: "Diciembre", inicio: 16, fin: 18 },
-] as const;
-
-type MesReportado = (typeof periodosAvance)[number]["nombre"];
+type PasoAvance = "captura" | "seleccion" | "preview";
 
 const limpiarTema = (tema: string) => tema.trim().replace(/\.$/, "");
 
@@ -79,6 +75,34 @@ const semanasDesdePrograma = (programa: ProgramaOficial): SemanaMateria[] => {
       tema: limpio(subtema),
     }))
     .filter((s) => s.tema.trim().length > 0);
+};
+
+const construirSemanaAvance = (
+  semana: { semana: string; tema: string },
+  index: number,
+): SemanaAvanceSeleccionable => {
+  const lineasSemana = semana.semana
+    .split("\n")
+    .map((linea) => linea.trim())
+    .filter(Boolean);
+  const lineasTema = semana.tema
+    .split("\n")
+    .map((linea) => linea.trim())
+    .filter(Boolean);
+  const numero =
+    Number(lineasSemana[0]?.match(/\d+/)?.[0]) || index + 1;
+  const unidadTema = lineasTema[0] || `Semana ${numero}`;
+  const subtemas = lineasTema.slice(1);
+
+  return {
+    id: `semana-${numero}`,
+    numero,
+    semana: lineasSemana[0] || `Semana ${numero}`,
+    fechas: lineasSemana.slice(1).join("\n"),
+    unidadTema,
+    subtemas: subtemas.length ? subtemas : [unidadTema],
+    temaCompleto: semana.tema,
+  };
 };
 
 const nombreArchivoSeguro = (valor: string) =>
@@ -186,26 +210,20 @@ const generarSecuenciaDidactica = (
   ].join("\n\n");
 };
 
-const obtenerPeriodoAvance = (mesReportado: MesReportado) =>
-  periodosAvance.find((periodo) => periodo.nombre === mesReportado) ||
-  periodosAvance[0];
-
 const obtenerAnioPeriodo = (periodo: string) =>
   periodo.match(/\d{4}/)?.[0] || new Date().getFullYear().toString();
 
 const obtenerSemanasAvance = (
   datosMateria: DatosMateria | undefined,
-  mesReportado: MesReportado,
+  semanasSeleccionadas?: SemanaMateria[],
 ) => {
-  const periodoAvance = obtenerPeriodoAvance(mesReportado);
-  const semanasSeleccionadas =
-    datosMateria?.semanas?.slice(periodoAvance.inicio, periodoAvance.fin) || [];
+  const semanasAvance = semanasSeleccionadas || datosMateria?.semanas || [];
 
   return Array.from({ length: 4 }, (_, index) => {
-    const semana = semanasSeleccionadas[index];
+    const semana = semanasAvance[index];
 
     return {
-      numero: `Semana ${index + 1}`,
+      numero: semana?.semana?.split("\n")[0] || `Semana ${index + 1}`,
       tema: semana?.tema
         ? limpiarTema(semana.tema)
         : "Sin tema programado para este periodo reportado.",
@@ -221,9 +239,10 @@ const construirDatosAvanceProgramatico = ({
   grupo,
   semestre,
   periodoEscolar,
-  mesReportado,
+  periodoReportado,
   escuela,
   licenciatura,
+  semanasSeleccionadas,
 }: {
   materia: string;
   datosMateria?: DatosMateria;
@@ -231,11 +250,15 @@ const construirDatosAvanceProgramatico = ({
   grupo: string;
   semestre: string;
   periodoEscolar: string;
-  mesReportado: MesReportado;
+  periodoReportado: string;
   escuela: string;
   licenciatura: string;
+  semanasSeleccionadas?: SemanaMateria[];
 }) => {
-  const semanasAvance = obtenerSemanasAvance(datosMateria, mesReportado);
+  const semanasAvance = obtenerSemanasAvance(
+    datosMateria,
+    semanasSeleccionadas,
+  );
   const temasSubtemasCubiertos = semanasAvance
     .filter((semana) => semana.sesiones !== "0")
     .map((semana) => `${semana.numero}: ${semana.tema}`)
@@ -259,13 +282,13 @@ const construirDatosAvanceProgramatico = ({
     asignatura: materia,
     curso: materia,
     asignaturaCurso: materia,
-    mes: mesReportado,
+    mes: periodoReportado,
     anio: obtenerAnioPeriodo(periodoEscolar),
     docente,
     licenciatura,
     semestre,
     grupo,
-    periodoReportado: `${mesReportado} ${obtenerAnioPeriodo(periodoEscolar)}`,
+    periodoReportado,
     periodoEscolar,
     temasCubiertos:
       temasSubtemasCubiertos || "Sin temas registrados para este periodo.",
@@ -469,8 +492,11 @@ export default function Home() {
   const [grupo, setGrupo] = useState("");
   const [cadetes, setCadetes] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
-  const [mesReportado, setMesReportado] =
-    useState<MesReportado>("Julio-Agosto");
+  const [pasoAvance, setPasoAvance] = useState<PasoAvance>("captura");
+  const [semanasAvanceSeleccionadas, setSemanasAvanceSeleccionadas] = useState<
+    string[]
+  >([]);
+  const [generandoAvance, setGenerandoAvance] = useState(false);
   const [generandoPresOficial, setGenerandoPresOficial] = useState(false);
   const [mensajePresOficial, setMensajePresOficial] = useState<{
     tipo: "exito" | "error";
@@ -516,6 +542,35 @@ export default function Home() {
 
   // El botón se muestra para toda materia con programa oficial.
   const materiaTienePrograma = esProgramaOficial(programaMateria);
+  const puntuacionesAvance = textoPuntuacionesF32(
+    "teorico-practica",
+    generacionPorSemestre(semestreSeleccionado),
+  );
+  const semanasAvanceDisponibles: SemanaAvanceSeleccionable[] =
+    esProgramaOficial(programaMateria)
+      ? distribuirPrograma(programaMateria, puntuacionesAvance)
+          .flatMap((bloque) => bloque.semanas)
+          .map(construirSemanaAvance)
+      : ((programaMateria as unknown as DatosMateria | undefined)?.semanas || [])
+          .map((semana, index) => {
+            const fecha = distribuirFechas(index + 1)[index];
+            return construirSemanaAvance(
+              {
+                semana: fecha ? etiquetaSemanaF32(fecha) : semana.semana,
+                tema: semana.tema,
+              },
+              index,
+            );
+          });
+  const semanasAvancePreview = semanasAvanceDisponibles.filter((semana) =>
+    semanasAvanceSeleccionadas.includes(semana.id),
+  );
+  const periodoAvanceSeleccionado =
+    semanasAvancePreview.length > 0
+      ? `Semanas ${semanasAvancePreview
+          .map((semana) => semana.numero)
+          .join(", ")} - ${periodo}`
+      : periodo;
 
   // Al cambiar de materia o carrera, seleccionar la PRIMERA unidad disponible
   // (no siempre es la número 1: algunos programas empiezan en otra unidad) y
@@ -524,6 +579,8 @@ export default function Home() {
     setUnidadSeleccionada(unidadesMateria[0]?.numero ?? 1);
     setTemaSeleccionado(TEMA_UNIDAD_COMPLETA);
     setMensajePresOficial(null);
+    setPasoAvance("captura");
+    setSemanasAvanceSeleccionadas([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [materiaSeleccionada, carrera]);
 
@@ -695,6 +752,55 @@ export default function Home() {
 
   const regresarAMaterias = () => {
     setMateriaSeleccionada("");
+  };
+
+  const abrirSeleccionAvance = () => {
+    setMensajePlaneacion(null);
+
+    if (!materiaSeleccionada) {
+      setMensajePlaneacion({
+        tipo: "error",
+        texto: "Selecciona una asignatura antes de generar el avance.",
+      });
+      return;
+    }
+
+    if (semanasAvanceDisponibles.length === 0) {
+      setMensajePlaneacion({
+        tipo: "error",
+        texto: "No hay semanas disponibles para esta asignatura.",
+      });
+      return;
+    }
+
+    setPasoAvance("seleccion");
+  };
+
+  const alternarSemanaAvance = (id: string) => {
+    setSemanasAvanceSeleccionadas((actuales) => {
+      if (actuales.includes(id)) {
+        return actuales.filter((semanaId) => semanaId !== id);
+      }
+
+      if (actuales.length >= 4) {
+        return actuales;
+      }
+
+      return [...actuales, id];
+    });
+  };
+
+  const continuarVistaPreviaAvance = () => {
+    if (semanasAvanceSeleccionadas.length === 0) {
+      setMensajePlaneacion({
+        tipo: "error",
+        texto: "Selecciona al menos una semana para el avance.",
+      });
+      return;
+    }
+
+    setMensajePlaneacion(null);
+    setPasoAvance("preview");
   };
 
   const generarWord = async () => {
@@ -875,11 +981,18 @@ export default function Home() {
     }
   };
 
-  const generarAvanceProgramatico = async () => {
+  const generarAvanceProgramatico = async (
+    semanasElegidas: SemanaAvanceSeleccionable[],
+  ) => {
+    setGenerandoAvance(true);
     setMensajePlaneacion(null);
     try {
       if (!materiaSeleccionada) {
         throw new Error("Selecciona una asignatura antes de generar el avance.");
+      }
+
+      if (semanasElegidas.length === 0 || semanasElegidas.length > 4) {
+        throw new Error("Selecciona de una a cuatro semanas para el avance.");
       }
 
       const response = await fetch("/templates/Avance-Programatico-F51.docx");
@@ -903,18 +1016,14 @@ export default function Home() {
       const programa = fuenteContenidos[materiaSeleccionada];
       let datosMateria = programa as unknown as DatosMateria | undefined;
       if (esProgramaOficial(programa)) {
-        const puntuaciones = textoPuntuacionesF32(
-          "teorico-practica",
-          generacionPorSemestre(semestreSeleccionado),
-        );
-        const semanas = distribuirPrograma(programa, puntuaciones)
-          .flatMap((bloque) => bloque.semanas)
-          .map((s) => ({ semana: s.semana, tema: s.tema }));
         datosMateria = {
           objetivoGeneral: programa.objetivoGeneral,
-          semanas,
         };
       }
+      const semanasSeleccionadas = semanasElegidas.map((semana) => ({
+        semana: `Semana ${semana.numero}`,
+        tema: [semana.unidadTema, ...semana.subtemas].join("\n"),
+      }));
 
       doc.render(
         construirDatosAvanceProgramatico({
@@ -924,9 +1033,10 @@ export default function Home() {
           grupo,
           semestre: semestreSeleccionado,
           periodoEscolar: periodo,
-          mesReportado,
+          periodoReportado: periodoAvanceSeleccionado,
           escuela: escuelaNautica,
           licenciatura,
+          semanasSeleccionadas,
         }),
       );
 
@@ -938,15 +1048,16 @@ export default function Home() {
 
       saveAs(
         blob,
-        `F51_${nombreArchivoSeguro(materiaSeleccionada) || "Avance"}_${nombreArchivoSeguro(
-          mesReportado,
+        `F51_${nombreArchivoSeguro(materiaSeleccionada) || "avance"}_${nombreArchivoSeguro(
+          periodoAvanceSeleccionado,
         )}.docx`,
       );
 
       setMensajePlaneacion({
         tipo: "exito",
-        texto: `Avance Programático F-51 generado y descargado (${mesReportado}).`,
+        texto: `Avance Programatico F-51 generado y descargado (${periodoAvanceSeleccionado}).`,
       });
+      setPasoAvance("captura");
     } catch (error) {
       console.error("Error generando F-51:", error);
       const detalle =
@@ -955,6 +1066,8 @@ export default function Home() {
         tipo: "error",
         texto: `No se pudo generar el Avance Programático F-51. ${detalle}`,
       });
+    } finally {
+      setGenerandoAvance(false);
     }
   };
 
@@ -1319,26 +1432,6 @@ export default function Home() {
                     </label>
 
                     <label>
-                      <span className={labelClass}>Mes reportado F-51</span>
-                      <select
-                        className={inputClass}
-                        value={mesReportado}
-                        onChange={(e) =>
-                          setMesReportado(e.target.value as MesReportado)
-                        }
-                      >
-                        {periodosAvance.map((periodoAvance) => (
-                          <option
-                            key={periodoAvance.nombre}
-                            value={periodoAvance.nombre}
-                          >
-                            {periodoAvance.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label>
                       <span className={labelClass}>Fecha de inicio</span>
                       <input
                         className={inputClass}
@@ -1431,7 +1524,7 @@ export default function Home() {
 
                     <button
                       type="button"
-                      onClick={generarAvanceProgramatico}
+                      onClick={abrirSeleccionAvance}
                       className="rounded-2xl bg-[#071a33] px-6 py-4 text-sm font-black uppercase tracking-[0.16em] text-white shadow-lg shadow-slate-300/70 transition hover:bg-[#0b2a52]"
                     >
                       Generar Avance Programático F-51
@@ -1449,6 +1542,30 @@ export default function Home() {
                     >
                       {mensajePlaneacion.texto}
                     </div>
+                  )}
+
+                  {pasoAvance === "seleccion" && (
+                    <SeleccionSemanasAvance
+                      semanas={semanasAvanceDisponibles}
+                      seleccionadas={semanasAvanceSeleccionadas}
+                      onToggleSemana={alternarSemanaAvance}
+                      onContinuar={continuarVistaPreviaAvance}
+                      onCancelar={() => setPasoAvance("captura")}
+                    />
+                  )}
+
+                  {pasoAvance === "preview" && (
+                    <VistaPreviaAvance
+                      materia={materiaSeleccionada}
+                      carrera={licenciatura}
+                      semestre={semestreSeleccionado}
+                      semanas={semanasAvancePreview}
+                      generando={generandoAvance}
+                      onVolver={() => setPasoAvance("seleccion")}
+                      onGenerar={() =>
+                        generarAvanceProgramatico(semanasAvancePreview)
+                      }
+                    />
                   )}
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">

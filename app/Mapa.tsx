@@ -34,6 +34,9 @@ type Bus = {
   // chofer ya lo reporta; si no existe, queda en null y el icono no se rota.
   heading: number | null;
   fecha?: Timestamp;
+  // Ultima actualizacion normalizada a milisegundos (a partir de fecha,
+  // timestamp, updatedAt, etc.). Se usa para la ventana de "en vivo".
+  actualizadoMs: number | null;
 };
 
 type Zona = "Tampico / Madero" | "Zona Norte / Altamira";
@@ -373,6 +376,40 @@ function leerHeading(value: unknown): number | null {
   if (!Number.isFinite(numero)) return null;
 
   return ((numero % 360) + 360) % 360;
+}
+
+// El GPS del chofer puede llegar con la marca de tiempo en distintos campos
+// (fecha, timestamp, updatedAt...) y formatos (Timestamp de Firestore, numero
+// en ms o texto ISO). Se normaliza a milisegundos para no descartar como
+// "inactivo" a un chofer que en realidad esta enviando GPS en vivo.
+function obtenerMsActualizacion(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+
+  if (
+    typeof value === "object" &&
+    "toDate" in value &&
+    typeof (value as { toDate?: unknown }).toDate === "function"
+  ) {
+    const fecha = (value as { toDate: () => Date }).toDate();
+    const ms = fecha.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const ms = Date.parse(value);
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  return null;
 }
 
 function normalizarUltimoViaje(value: unknown) {
@@ -1621,23 +1658,52 @@ export default function Mapa({
         .map((docSnap) => {
           const d = docSnap.data();
 
+          // El chofer puede guardar el nombre de la ruta en distintos campos
+          // (ruta, nombre, routeName, nombreRuta, routeId). Se leen todos para
+          // no perder el camion al filtrar por la ruta seleccionada.
+          const nombreRuta = String(
+            d.nombre ||
+              d.ruta ||
+              d.routeName ||
+              d.nombreRuta ||
+              d.routeId ||
+              "Autobús"
+          );
+          const rutaBus = String(
+            d.ruta ||
+              d.nombre ||
+              d.routeName ||
+              d.nombreRuta ||
+              d.routeId ||
+              "Sin ruta"
+          );
+
           return {
             id: docSnap.id,
-            nombre: String(d.nombre || d.ruta || "Autobús"),
-            ruta: String(d.ruta || d.nombre || "Sin ruta"),
+            nombre: nombreRuta,
+            ruta: rutaBus,
             lat: Number(d.lat),
             lng: Number(d.lng),
             heading: leerHeading(d.heading ?? d.direction ?? d.rumbo),
             fecha: d.fecha,
+            actualizadoMs: obtenerMsActualizacion(
+              d.fecha ??
+                d.timestamp ??
+                d.updatedAt ??
+                d.lastUpdate ??
+                d.fechaActualizacion ??
+                d.hora
+            ),
           };
         })
         .filter((b) => {
           if (Number.isNaN(b.lat) || Number.isNaN(b.lng)) return false;
 
-          if (!b.fecha?.toDate) return false;
+          // Si no hay marca de tiempo legible no se puede afirmar que el GPS
+          // siga activo: se descarta para mantener "No hay autobus activo".
+          if (b.actualizadoMs === null) return false;
 
-          const minutos =
-            (Date.now() - b.fecha.toDate().getTime()) / 1000 / 60;
+          const minutos = (Date.now() - b.actualizadoMs) / 1000 / 60;
 
           return minutos <= 30;
         });
@@ -1780,10 +1846,11 @@ export default function Mapa({
     const activas = new Set<string>();
 
     for (const ruta of rutas) {
+      const objetivo = normalizarNombreRuta(ruta.nombre);
       const tieneBusEnVivo = buses.some(
         (b) =>
-          b.nombre?.toLowerCase().includes(ruta.nombre.toLowerCase()) ||
-          b.ruta?.toLowerCase().includes(ruta.nombre.toLowerCase())
+          normalizarNombreRuta(b.nombre || "").includes(objetivo) ||
+          normalizarNombreRuta(b.ruta || "").includes(objetivo)
       );
       const tieneGpsExterno = GPS_EXTERNOS.some(
         (gps) =>
@@ -1802,10 +1869,12 @@ export default function Mapa({
   const busesFiltrados = useMemo(() => {
     if (!rutaSeleccionada) return [];
 
+    const objetivo = normalizarNombreRuta(rutaSeleccionada);
+
     return buses.filter(
       (b) =>
-        b.nombre?.toLowerCase().includes(rutaSeleccionada.toLowerCase()) ||
-        b.ruta?.toLowerCase().includes(rutaSeleccionada.toLowerCase())
+        normalizarNombreRuta(b.nombre || "").includes(objetivo) ||
+        normalizarNombreRuta(b.ruta || "").includes(objetivo)
     );
   }, [buses, rutaSeleccionada]);
 
@@ -1825,9 +1894,9 @@ export default function Mapa({
       const distancia = ubicacion
         ? distanciaMetros(ubicacion, [bus.lat, bus.lng])
         : null;
-      const actualizadoMs = bus.fecha?.toDate
-        ? bus.fecha.toDate().getTime()
-        : null;
+      const actualizadoMs =
+        bus.actualizadoMs ??
+        (bus.fecha?.toDate ? bus.fecha.toDate().getTime() : null);
 
       if (!mejor) {
         mejor = { bus, distancia, actualizadoMs };

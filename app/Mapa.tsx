@@ -30,6 +30,9 @@ type Bus = {
   ruta?: string;
   lat: number;
   lng: number;
+  // Rumbo opcional del autobus (0-360, 0 = norte). Solo se usa si el GPS del
+  // chofer ya lo reporta; si no existe, queda en null y el icono no se rota.
+  heading: number | null;
   fecha?: Timestamp;
 };
 
@@ -153,6 +156,8 @@ const ETIQUETAS_LUGARES: Record<CategoriaLugar, string> = {
   bar: "Bar",
   pub: "Pub",
 };
+// Umbral de proximidad para avisar "Tu autobús está llegando".
+const PROXIMIDAD_BUS_LLEGANDO_M = 300;
 const ES_DESARROLLO = process.env.NODE_ENV === "development";
 const GOOGLE_MAPS_CALLBACK = "__rutasTampicoGoogleMapsReady";
 
@@ -292,6 +297,13 @@ function formatearHaceTiempo(actualizadoMs: number | null, ahoraMs: number) {
   return `Última actualización hace ${minutos} min`;
 }
 
+// Texto simple de distancia para el panel del pasajero: "Distancia: X m" o km.
+function formatearDistanciaSimple(distancia: number) {
+  if (distancia < 1000) return `Distancia: ${Math.round(distancia)} m`;
+
+  return `Distancia: ${(distancia / 1000).toFixed(2)} km`;
+}
+
 function formatearDistanciaCorta(distancia: number | null) {
   if (distancia === null) return "Distancia no disponible";
   if (distancia < 1000) return `Bus a ${Math.round(distancia)} metros`;
@@ -349,6 +361,18 @@ function obtenerNumero(value: unknown) {
   const numero = Number(value);
 
   return Number.isFinite(numero) ? numero : 0;
+}
+
+// Normaliza el rumbo del autobus a 0-360. Devuelve null cuando el GPS del
+// chofer no reporta direccion, para no inventar una orientacion.
+function leerHeading(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+
+  const numero = Number(value);
+
+  if (!Number.isFinite(numero)) return null;
+
+  return ((numero % 360) + 360) % 360;
 }
 
 function normalizarUltimoViaje(value: unknown) {
@@ -760,11 +784,18 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
   return lugaresUnicos;
 }
 
-const busIcon = new L.DivIcon({
-  html: `
+// Construye el icono del autobus. Si el GPS reporta rumbo (heading) se rota el
+// cuerpo del bus para indicar hacia donde va; si no, queda en su orientacion
+// normal sin romper el marcador.
+function crearBusIcon(heading: number | null) {
+  const estiloRotacion =
+    heading === null ? "" : ` style="transform: rotate(${heading}deg);"`;
+
+  return new L.DivIcon({
+    html: `
     <div class="rt-bus-marker" aria-hidden="true">
       <span class="rt-bus-marker__pulse"></span>
-      <div class="rt-bus-marker__body">
+      <div class="rt-bus-marker__body"${estiloRotacion}>
         <svg viewBox="0 0 48 48" role="img" focusable="false">
           <path d="M12 9h24c4 0 7 3 7 7v15c0 3-2 6-5 7l-1 3a3 3 0 0 1-3 2h-1a3 3 0 0 1-3-3v-1H18v1a3 3 0 0 1-3 3h-1a3 3 0 0 1-3-2l-1-3c-3-1-5-4-5-7V16c0-4 3-7 7-7Z" fill="currentColor"/>
           <path d="M11 17c0-2 1-3 3-3h20c2 0 3 1 3 3v8H11v-8Z" fill="white" opacity=".92"/>
@@ -776,11 +807,14 @@ const busIcon = new L.DivIcon({
       </div>
     </div>
   `,
-  className: "",
-  iconSize: [56, 56],
-  iconAnchor: [28, 31],
-  popupAnchor: [0, -26],
-});
+    className: "",
+    iconSize: [56, 56],
+    iconAnchor: [28, 31],
+    popupAnchor: [0, -26],
+  });
+}
+
+const busIcon = crearBusIcon(null);
 
 const miUbicacionIcon = new L.DivIcon({
   html: `
@@ -1429,11 +1463,17 @@ function GpsExternoMarker({ gps }: { gps: GpsExterno }) {
 
 function BusAnimado({ bus }: { bus: Bus }) {
   const posicion: [number, number] = [bus.lat, bus.lng];
+  // Si el GPS del chofer reporta rumbo, se usa un icono rotado; si no, el icono
+  // normal compartido. Se memoiza para no recrear el DivIcon en cada render.
+  const icono = useMemo(
+    () => (bus.heading === null ? busIcon : crearBusIcon(bus.heading)),
+    [bus.heading]
+  );
 
   return (
     <Marker
       position={posicion}
-      icon={busIcon}
+      icon={icono}
       riseOnHover={true}
     >
       <Popup>
@@ -1442,6 +1482,12 @@ function BusAnimado({ bus }: { bus: Bus }) {
         Ruta: {bus.ruta}
         <br />
         Ubicación reportada en vivo
+        {bus.heading !== null && (
+          <>
+            <br />
+            Rumbo: {Math.round(bus.heading)}°
+          </>
+        )}
       </Popup>
     </Marker>
   );
@@ -1552,6 +1598,7 @@ export default function Mapa({
   // Reloj que avanza cada segundo para refrescar "hace X segundos" del bus.
   const [ahora, setAhora] = useState(() => Date.now());
   const [esperandoRuta, setEsperandoRuta] = useState(false);
+  const [enviandoEspera, setEnviandoEspera] = useState(false);
   const [reportandoPaso, setReportandoPaso] = useState(false);
   const [mensajeAccionRuta, setMensajeAccionRuta] = useState("");
 
@@ -1564,6 +1611,7 @@ export default function Mapa({
   // Al cambiar de ruta se reinicia el estado de las acciones del panel.
   useEffect(() => {
     setEsperandoRuta(false);
+    setEnviandoEspera(false);
     setMensajeAccionRuta("");
   }, [rutaSeleccionada]);
 
@@ -1579,6 +1627,7 @@ export default function Mapa({
             ruta: String(d.ruta || d.nombre || "Sin ruta"),
             lat: Number(d.lat),
             lng: Number(d.lng),
+            heading: leerHeading(d.heading ?? d.direction ?? d.rumbo),
             fecha: d.fecha,
           };
         })
@@ -1848,6 +1897,27 @@ export default function Mapa({
   // Hay actividad real en la ruta si existe un autobus en vivo o el GPS externo.
   const hayBusActivo =
     busesFiltrados.length > 0 || Boolean(gpsBus01Seleccionado);
+  // Distancia real al autobus mas cercano (en vivo o GPS externo) cuando hay
+  // ubicacion del usuario. Solo usa datos reales; null si no se puede calcular.
+  const distanciaBusMasCercanaMetros = useMemo(() => {
+    const distancias: number[] = [];
+
+    if (infoBusCercano?.distancia !== null && infoBusCercano?.distancia !== undefined) {
+      distancias.push(infoBusCercano.distancia);
+    }
+
+    if (distanciaGpsBus01Metros !== null) {
+      distancias.push(distanciaGpsBus01Metros);
+    }
+
+    if (distancias.length === 0) return null;
+
+    return Math.min(...distancias);
+  }, [infoBusCercano, distanciaGpsBus01Metros]);
+  // Alerta simple de proximidad: el bus mas cercano esta a menos de 300 m.
+  const busLlegando =
+    distanciaBusMasCercanaMetros !== null &&
+    distanciaBusMasCercanaMetros < PROXIMIDAD_BUS_LLEGANDO_M;
   const esZonaNorteSeleccionada =
     zonaSeleccionada === "Zona Norte / Altamira";
   const clasePantallaRutas = esZonaNorteSeleccionada
@@ -1941,20 +2011,54 @@ export default function Mapa({
     setCentrarRutaSolicitud((valor) => valor + 1);
   };
 
-  // "Estoy esperando esta ruta": confirmacion local. La presencia del usuario en
-  // la ruta ya se registra en el contador (hook useUserPresence en page.tsx),
-  // asi que aqui solo damos retroalimentacion visible sin tocar Firestore.
-  const toggleEsperandoRuta = () => {
-    setEsperandoRuta((activo) => {
-      const nuevo = !activo;
-      setMensajeAccionRuta(
-        nuevo
-          ? "Listo, marcaste que estás esperando esta ruta."
-          : "Dejaste de esperar esta ruta."
-      );
+  // "Estoy esperando esta ruta": al activarlo se registra el reporte en
+  // Firestore (coleccion "sugerencias", permitida por las reglas actuales) con
+  // routeId, routeName, ubicacion del usuario si existe, timestamp y
+  // status: "waiting". Sin login y sin datos personales. Al desactivar solo se
+  // limpia el estado local; no se borra nada en Firestore.
+  const toggleEsperandoRuta = async () => {
+    if (enviandoEspera) return;
 
-      return nuevo;
-    });
+    if (esperandoRuta) {
+      setEsperandoRuta(false);
+      setMensajeAccionRuta("Dejaste de esperar esta ruta.");
+      return;
+    }
+
+    if (!rutaSeleccionada) {
+      setMensajeAccionRuta("Selecciona una ruta antes de marcar que esperas.");
+      return;
+    }
+
+    setEnviandoEspera(true);
+    setMensajeAccionRuta("Registrando que esperas esta ruta...");
+
+    try {
+      await addDoc(collection(db, "sugerencias"), {
+        tipo: "esperando_ruta",
+        origen: "mapa_pasajero",
+        routeId: rutaSeleccionada,
+        routeName: rutaSeleccionada,
+        ruta: rutaSeleccionada,
+        zona: zonaSeleccionada,
+        status: "waiting",
+        userLocation: ubicacion
+          ? { lat: ubicacion[0], lng: ubicacion[1] }
+          : null,
+        latUsuario: ubicacion?.[0] ?? null,
+        lngUsuario: ubicacion?.[1] ?? null,
+        timestamp: serverTimestamp(),
+        fecha: serverTimestamp(),
+      });
+
+      setEsperandoRuta(true);
+      setMensajeAccionRuta("Listo, marcaste que estás esperando esta ruta.");
+    } catch (error) {
+      console.error("No se pudo registrar la espera de ruta", error);
+      setMensajeAccionRuta("No se pudo registrar tu espera. Intenta otra vez.");
+    } finally {
+      setEnviandoEspera(false);
+    }
   };
 
   // "Reportar que ya pasó": se guarda en la coleccion "sugerencias" (permitida
@@ -2491,6 +2595,13 @@ export default function Mapa({
           )}
         </div>
 
+        {modoUsuario === "pasajero" && busLlegando && (
+          <div className="rt-bus-arriving" role="status">
+            <span className="rt-bus-arriving__icon" aria-hidden="true">🚌</span>
+            <span>Tu autobús está llegando</span>
+          </div>
+        )}
+
         {modoUsuario === "pasajero" && (
           <div className="rt-bus-status">
             {hayBusActivo ? (
@@ -2508,6 +2619,12 @@ export default function Mapa({
                   <div className="rt-bus-status__dist">
                     {formatearDistanciaCorta(infoBusCercano.distancia)}
                   </div>
+                  {infoBusCercano.distancia !== null && (
+                    <div className="rt-bus-status__eta">
+                      🚌 Llega en {formatearEtaBus(infoBusCercano.distancia)} ·{" "}
+                      {formatearDistanciaSimple(infoBusCercano.distancia)}
+                    </div>
+                  )}
                   <div className="rt-bus-status__time">
                     {formatearHaceTiempo(infoBusCercano.actualizadoMs, ahora)}
                   </div>
@@ -2546,13 +2663,16 @@ export default function Mapa({
             <button
               type="button"
               onClick={toggleEsperandoRuta}
+              disabled={enviandoEspera}
               className={
                 esperandoRuta
                   ? "rt-route-action rt-route-action--waiting rt-route-action--on"
                   : "rt-route-action rt-route-action--waiting"
               }
             >
-              {esperandoRuta
+              {enviandoEspera
+                ? "Registrando..."
+                : esperandoRuta
                 ? "✓ Esperando esta ruta"
                 : "Estoy esperando esta ruta"}
             </button>

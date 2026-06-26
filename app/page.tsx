@@ -51,6 +51,7 @@ export default function Home() {
   const [cargandoClimaTam, setCargandoClimaTam] = useState(false);
   const [mostrarClimaTam, setMostrarClimaTam] = useState(false);
   const [clicksTamSesion, setClicksTamSesion] = useState(0);
+  const [mostrarConfirmacion911, setMostrarConfirmacion911] = useState(false);
   const usuariosEnLinea = useOnlineUsers();
 
   useUserPresence(modo === "inicio" ? null : rutaActiva);
@@ -146,8 +147,19 @@ export default function Home() {
     );
   };
 
+  // Antes de marcar al 911 se pide confirmacion para evitar llamadas
+  // accidentales; la llamada solo ocurre si el usuario confirma.
   const llamarEmergencias = () => {
+    setMostrarConfirmacion911(true);
+  };
+
+  const confirmarLlamada911 = () => {
+    setMostrarConfirmacion911(false);
     window.location.href = "tel:911";
+  };
+
+  const cancelarLlamada911 = () => {
+    setMostrarConfirmacion911(false);
   };
 
   const cerrarPromoTam = () => {
@@ -450,6 +462,98 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        {mostrarConfirmacion911 && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirmar llamada al 911"
+            onClick={cancelarLlamada911}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 1000,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+              background: "rgba(2,6,23,.72)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <div
+              onClick={(event) => event.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: 360,
+                background: "linear-gradient(135deg, #111827, #1e293b)",
+                border: "1px solid rgba(248,113,113,.4)",
+                borderRadius: 24,
+                padding: 24,
+                textAlign: "center",
+                boxShadow: "0 24px 60px rgba(0,0,0,.55)",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <div style={{ fontSize: 40 }} aria-hidden="true">
+                🚨
+              </div>
+              <h2
+                style={{
+                  color: "white",
+                  fontSize: 20,
+                  fontWeight: 900,
+                  margin: 0,
+                }}
+              >
+                ¿Deseas llamar al 911?
+              </h2>
+              <p style={{ color: "#cbd5e1", fontSize: 14, margin: 0 }}>
+                Se abrirá el marcador de tu teléfono para llamar a emergencias.
+              </p>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={cancelarLlamada911}
+                  style={{
+                    flex: 1,
+                    background: "rgba(148,163,184,.18)",
+                    color: "white",
+                    border: "1px solid rgba(148,163,184,.35)",
+                    padding: 14,
+                    borderRadius: 16,
+                    fontSize: 15,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmarLlamada911}
+                  style={{
+                    flex: 1,
+                    background: "#dc2626",
+                    color: "white",
+                    border: "none",
+                    padding: 14,
+                    borderRadius: 16,
+                    fontSize: 15,
+                    fontWeight: 900,
+                    cursor: "pointer",
+                  }}
+                >
+                  Llamar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {mostrarPromoTam && (
           <aside

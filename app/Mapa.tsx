@@ -16,13 +16,20 @@ import "leaflet/dist/leaflet.css";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   onSnapshot,
   runTransaction,
   serverTimestamp,
+  setDoc,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
+
+// Un autobus en vivo se considera activo solo si su ultima actualizacion fue
+// hace 2 minutos o menos. Asi un chofer que cierra la app sin que se borre su
+// documento deja de contar como activo poco despues.
+const BUS_ACTIVO_MAX_MINUTOS = 2;
 
 type Bus = {
   id: string;
@@ -1638,12 +1645,66 @@ export default function Mapa({
   const [enviandoEspera, setEnviandoEspera] = useState(false);
   const [reportandoPaso, setReportandoPaso] = useState(false);
   const [mensajeAccionRuta, setMensajeAccionRuta] = useState("");
+  // Transmision de GPS en vivo del chofer hacia la coleccion "autobuses".
+  const [transmitiendoGps, setTransmitiendoGps] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+  const sessionTransmisionRef = useRef<string | null>(null);
 
   useEffect(() => {
     const intervalo = window.setInterval(() => setAhora(Date.now()), 1000);
 
     return () => window.clearInterval(intervalo);
   }, []);
+
+  // Si el chofer cierra la pestaña/app o el componente se desmonta mientras
+  // transmite, se intenta detener el watch y borrar su documento de
+  // "autobuses". Si la baja no alcanza a enviarse, la ventana de 2 minutos lo
+  // marca inactivo de todos modos.
+  useEffect(() => {
+    const detenerEnSalida = () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+
+      const sessionId = sessionTransmisionRef.current;
+      sessionTransmisionRef.current = null;
+
+      if (sessionId) {
+        void deleteDoc(doc(db, "autobuses", sessionId)).catch(() => undefined);
+      }
+    };
+
+    window.addEventListener("beforeunload", detenerEnSalida);
+    window.addEventListener("pagehide", detenerEnSalida);
+
+    return () => {
+      window.removeEventListener("beforeunload", detenerEnSalida);
+      window.removeEventListener("pagehide", detenerEnSalida);
+      detenerEnSalida();
+    };
+  }, []);
+
+  // Si el chofer abandona la pantalla del mapa (vuelve a rutas/zonas) mientras
+  // transmite, se detiene la transmision y se borra su autobus: ya no hay boton
+  // visible para detenerlo y no debe seguir publicando una ruta que dejo.
+  useEffect(() => {
+    if (pantallaFlujo === "mapa" || !transmitiendoGps) return;
+
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    setTransmitiendoGps(false);
+
+    const sessionId = sessionTransmisionRef.current;
+    sessionTransmisionRef.current = null;
+
+    if (sessionId) {
+      void deleteDoc(doc(db, "autobuses", sessionId)).catch(() => undefined);
+    }
+  }, [pantallaFlujo, transmitiendoGps]);
 
   // Al cambiar de ruta se reinicia el estado de las acciones del panel.
   useEffect(() => {
@@ -1705,7 +1766,9 @@ export default function Mapa({
 
           const minutos = (Date.now() - b.actualizadoMs) / 1000 / 60;
 
-          return minutos <= 30;
+          // Un autobus con mas de 2 minutos sin actualizar se considera
+          // inactivo (chofer que cerro la app sin que se borrara el doc).
+          return minutos <= BUS_ACTIVO_MAX_MINUTOS;
         });
 
       setBuses(data);
@@ -2046,6 +2109,93 @@ export default function Mapa({
         alert("No se pudo obtener tu ubicación.");
       }
     );
+  };
+
+  // El chofer publica su ubicacion en vivo en "autobuses/{sessionId}". Cada
+  // nueva posicion del GPS sobrescribe el documento (status "active"), para que
+  // los pasajeros lo vean moverse. No toca usuariosEnLinea ni Viaje Seguro.
+  const iniciarTransmisionGps = () => {
+    if (transmitiendoGps) return;
+
+    if (!rutaSeleccionada) {
+      setMensajeAccionRuta("Selecciona una ruta antes de transmitir tu ubicación.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert("Tu navegador no permite ubicación.");
+      return;
+    }
+
+    const sessionId = userId || obtenerOCrearUserId();
+    setUserId(sessionId);
+    sessionTransmisionRef.current = sessionId;
+
+    const rutaActual = rutaSeleccionada;
+    const busRef = doc(db, "autobuses", sessionId);
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+
+        setUbicacion([lat, lng]);
+
+        void setDoc(
+          busRef,
+          {
+            lat,
+            lng,
+            heading: leerHeading(pos.coords.heading),
+            speed:
+              typeof pos.coords.speed === "number" &&
+              Number.isFinite(pos.coords.speed)
+                ? pos.coords.speed
+                : null,
+            routeId: rutaActual,
+            routeName: rutaActual,
+            status: "active",
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        ).catch((error) => {
+          console.error("No se pudo publicar el GPS del chofer", error);
+        });
+      },
+      () => {
+        setMensajeAccionRuta(
+          "No se pudo obtener tu ubicación para transmitir. Revisa los permisos de GPS."
+        );
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+
+    watchIdRef.current = watchId;
+    setTransmitiendoGps(true);
+    setMensajeAccionRuta("Estás transmitiendo tu ubicación en vivo.");
+  };
+
+  const detenerTransmisionGps = async () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    setTransmitiendoGps(false);
+
+    const sessionId = sessionTransmisionRef.current;
+    sessionTransmisionRef.current = null;
+
+    if (sessionId) {
+      try {
+        await deleteDoc(doc(db, "autobuses", sessionId));
+      } catch (error) {
+        // Si no se logra borrar, la ventana de 2 minutos lo marca inactivo.
+        console.error("No se pudo eliminar el autobús del chofer", error);
+      }
+    }
+
+    setMensajeAccionRuta("Dejaste de transmitir tu ubicación.");
   };
 
   const verBusYMiUbicacion = () => {
@@ -2758,6 +2908,33 @@ export default function Mapa({
         )}
 
         {modoUsuario === "pasajero" && mensajeAccionRuta && (
+          <div className="rt-route-action-msg">{mensajeAccionRuta}</div>
+        )}
+
+        {modoUsuario === "chofer" && (
+          <div className="rt-driver-actions">
+            <button
+              type="button"
+              onClick={
+                transmitiendoGps
+                  ? detenerTransmisionGps
+                  : iniciarTransmisionGps
+              }
+              disabled={!rutaSeleccionada && !transmitiendoGps}
+              className={
+                transmitiendoGps
+                  ? "rt-route-action rt-route-action--broadcast rt-route-action--on"
+                  : "rt-route-action rt-route-action--broadcast"
+              }
+            >
+              {transmitiendoGps
+                ? "⏹ Detener GPS en vivo"
+                : "🟢 Iniciar GPS en vivo"}
+            </button>
+          </div>
+        )}
+
+        {modoUsuario === "chofer" && mensajeAccionRuta && (
           <div className="rt-route-action-msg">{mensajeAccionRuta}</div>
         )}
 

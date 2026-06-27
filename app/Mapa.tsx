@@ -1859,6 +1859,7 @@ export default function Mapa({
   // Solo el ID; los datos se derivan en vivo de `buses` para que la hoja
   // muestre posicion/velocidad/señal frescas mientras el camion se mueve.
   const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
+  const [buscandoUbicacion, setBuscandoUbicacion] = useState(false);
   const [esperandoRuta, setEsperandoRuta] = useState(false);
   const [enviandoEspera, setEnviandoEspera] = useState(false);
   const [reportandoPaso, setReportandoPaso] = useState(false);
@@ -2329,13 +2330,17 @@ export default function Mapa({
       return;
     }
 
+    setBuscandoUbicacion(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUbicacion([pos.coords.latitude, pos.coords.longitude]);
+        setBuscandoUbicacion(false);
       },
       () => {
-        alert("No se pudo obtener tu ubicación.");
-      }
+        setBuscandoUbicacion(false);
+        alert("No se pudo obtener tu ubicación. Revisa el permiso de GPS.");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 
@@ -3249,15 +3254,35 @@ export default function Mapa({
         <button
           type="button"
           onClick={obtenerMiUbicacion}
-          className={
-            ubicacion
-              ? "rt-fab rt-fab--primary rt-fab--active"
-              : "rt-fab rt-fab--primary"
-          }
-          aria-label="Ir a mi ubicación"
+          disabled={buscandoUbicacion}
+          className={ubicacion ? "fab-cerca fab-cerca--active" : "fab-cerca"}
+          aria-label="Centrar en mí"
         >
-          <span>Mi ubicación</span>
-          {ubicacion && <small>GPS activo</small>}
+          <span
+            className={
+              buscandoUbicacion
+                ? "fab-cerca__icon fab-cerca__icon--spin"
+                : "fab-cerca__icon"
+            }
+            aria-hidden="true"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="22"
+              height="22"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <circle cx="12" cy="12" r="6" />
+              <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+              <line x1="12" y1="1.5" x2="12" y2="5" />
+              <line x1="12" y1="19" x2="12" y2="22.5" />
+              <line x1="1.5" y1="12" x2="5" y2="12" />
+              <line x1="19" y1="12" x2="22.5" y2="12" />
+            </svg>
+          </span>
         </button>
       </div>
 

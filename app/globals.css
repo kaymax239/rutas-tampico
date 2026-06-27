@@ -1099,18 +1099,68 @@ button {
   position: relative;
   width: 28px;
   height: 28px;
+}
+
+/* Anillo azul pulsante alrededor del punto del usuario. */
+.rt-location-marker::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.16);
-  box-shadow: 0 0 0 8px rgba(15, 118, 110, 0.1);
+  background: rgba(37, 99, 235, 0.35);
+  animation: rt-bus-pulse 2s ease-out infinite;
 }
 
 .rt-location-marker span {
   position: absolute;
-  inset: 6px;
+  inset: 7px;
   border: 3px solid #ffffff;
   border-radius: 999px;
-  background: #0f766e;
-  box-shadow: 0 0 18px rgba(15, 118, 110, 0.78);
+  background: #2563eb;
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.85);
+}
+
+/* FAB redondo "centrar en mí" con ícono de mira (crosshair). */
+.fab-cerca {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #2563eb;
+  cursor: pointer;
+  box-shadow:
+    0 16px 30px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+.fab-cerca:disabled {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.fab-cerca--active {
+  color: #1d4ed8;
+  box-shadow:
+    0 16px 30px rgba(37, 99, 235, 0.4),
+    0 0 0 3px rgba(37, 99, 235, 0.35);
+}
+
+.fab-cerca__icon {
+  display: grid;
+  place-items: center;
+}
+
+.fab-cerca__icon--spin {
+  animation: fab-spin 0.8s linear infinite;
+}
+
+@keyframes fab-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes rt-bus-pulse {
@@ -1643,6 +1693,14 @@ button {
   }
 
   .rt-bus-marker__pulse {
+    animation: none;
+  }
+
+  .rt-location-marker::before {
+    animation: none;
+  }
+
+  .fab-cerca__icon--spin {
     animation: none;
   }
 }

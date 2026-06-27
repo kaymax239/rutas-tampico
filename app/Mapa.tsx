@@ -832,6 +832,10 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
 // que sea ~ el intervalo entre actualizaciones de Firestore para que el bus se
 // mueva de forma continua sin "alcanzar" su destino antes del siguiente dato.
 const ANIMACION_BUS_MS = 1200;
+// Limites del auto-ajuste: la duracion se adapta al tiempo real entre updates
+// de Firestore, acotada entre estos minimos/maximos.
+const DURACION_MIN = 500;
+const DURACION_MAX = 5000;
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -1542,6 +1546,9 @@ function GpsExternoMarker({ gps }: { gps: GpsExterno }) {
 function AnimatedBus({ bus, icon }: { bus: Bus; icon: L.DivIcon }) {
   const markerRef = useRef<L.Marker | null>(null);
   const rafRef = useRef<number | null>(null);
+  // Momento de la ultima actualizacion de posicion, para medir el intervalo
+  // real entre updates y usarlo como duracion de la animacion.
+  const lastUpdateRef = useRef<number>(performance.now());
   // Estado realmente mostrado (no el destino). Persiste entre actualizaciones.
   const estadoRef = useRef({
     lat: bus.lat,
@@ -1553,6 +1560,15 @@ function AnimatedBus({ bus, icon }: { bus: Bus; icon: L.DivIcon }) {
     const marker = markerRef.current;
 
     if (!marker) return;
+
+    // Mide cuanto paso desde el update anterior y lo usa como duracion. En el
+    // primer disparo (medido casi 0) cae al valor por defecto.
+    const medido = performance.now() - lastUpdateRef.current;
+    lastUpdateRef.current = performance.now();
+    const duration =
+      medido < 50
+        ? ANIMACION_BUS_MS
+        : Math.min(Math.max(medido, DURACION_MIN), DURACION_MAX);
 
     const desde = { ...estadoRef.current };
     const hacia = { lat: bus.lat, lng: bus.lng };
@@ -1572,7 +1588,7 @@ function AnimatedBus({ bus, icon }: { bus: Bus; icon: L.DivIcon }) {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
     const frame = (ahoraMs: number) => {
-      const t = Math.min((ahoraMs - inicio) / ANIMACION_BUS_MS, 1);
+      const t = Math.min((ahoraMs - inicio) / duration, 1);
       const e = 1 - (1 - t) * (1 - t); // easeOutQuad: arranca rapido, frena suave
       const lat = lerp(desde.lat, hacia.lat, e);
       const lng = lerp(desde.lng, hacia.lng, e);

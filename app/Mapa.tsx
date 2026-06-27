@@ -828,9 +828,38 @@ async function buscarLugaresGoogle(ubicacion: [number, number]) {
   return lugaresUnicos;
 }
 
-// Construye el icono del autobus. Si el GPS reporta rumbo (heading) se rota el
-// cuerpo del bus para indicar hacia donde va; si no, queda en su orientacion
-// normal sin romper el marcador.
+// Duracion (ms) de la interpolacion entre dos posiciones del autobus. Conviene
+// que sea ~ el intervalo entre actualizaciones de Firestore para que el bus se
+// mueva de forma continua sin "alcanzar" su destino antes del siguiente dato.
+const ANIMACION_BUS_MS = 1200;
+
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+// Interpola un angulo por el camino mas corto (350° -> 10° gira +20°, no -340°).
+function lerpAngle(a: number, b: number, t: number) {
+  const diff = ((b - a + 540) % 360) - 180;
+
+  return a + diff * t;
+}
+
+// Rumbo (bearing) entre dos coordenadas, en grados (0 = norte).
+function obtenerBearing(desde: [number, number], hacia: [number, number]) {
+  const lat1 = (desde[0] * Math.PI) / 180;
+  const lat2 = (hacia[0] * Math.PI) / 180;
+  const dLon = ((hacia[1] - desde[1]) * Math.PI) / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
+// Construye el icono del autobus. El cuerpo (.rt-bus-marker__body) es el
+// elemento que se rota; la rotacion en vivo la aplica AnimatedBus por JS, por
+// eso el icono se mantiene estable (no se recrea en cada actualizacion).
 function crearBusIcon(heading: number | null) {
   const estiloRotacion =
     heading === null ? "" : ` style="transform: rotate(${heading}deg);"`;
@@ -1505,19 +1534,75 @@ function GpsExternoMarker({ gps }: { gps: GpsExterno }) {
   );
 }
 
-function BusAnimado({ bus }: { bus: Bus }) {
-  const posicion: [number, number] = [bus.lat, bus.lng];
-  // Si el GPS del chofer reporta rumbo, se usa un icono rotado; si no, el icono
-  // normal compartido. Se memoiza para no recrear el DivIcon en cada render.
-  const icono = useMemo(
-    () => (bus.heading === null ? busIcon : crearBusIcon(bus.heading)),
-    [bus.heading]
-  );
+// Autobus en vivo con movimiento suave: en lugar de "saltar" a cada posicion
+// nueva de Firestore, interpola entre la posicion mostrada y la nueva con
+// requestAnimationFrame (60 fps) usando setLatLng directo sobre el marcador de
+// Leaflet (sin re-render de React). Ademas rota el cuerpo hacia donde avanza:
+// usa el rumbo del GPS del chofer si existe, o lo calcula del propio movimiento.
+function AnimatedBus({ bus, icon }: { bus: Bus; icon: L.DivIcon }) {
+  const markerRef = useRef<L.Marker | null>(null);
+  const rafRef = useRef<number | null>(null);
+  // Estado realmente mostrado (no el destino). Persiste entre actualizaciones.
+  const estadoRef = useRef({
+    lat: bus.lat,
+    lng: bus.lng,
+    angle: bus.heading ?? 0,
+  });
+
+  useEffect(() => {
+    const marker = markerRef.current;
+
+    if (!marker) return;
+
+    const desde = { ...estadoRef.current };
+    const hacia = { lat: bus.lat, lng: bus.lng };
+    // Si casi no se movio, no recalcula el angulo (evita girar al norte parado).
+    const seMovio =
+      Math.abs(hacia.lat - desde.lat) > 1e-7 ||
+      Math.abs(hacia.lng - desde.lng) > 1e-7;
+    const anguloDestino =
+      bus.heading !== null
+        ? bus.heading
+        : seMovio
+        ? obtenerBearing([desde.lat, desde.lng], [hacia.lat, hacia.lng])
+        : desde.angle;
+
+    const inicio = performance.now();
+
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+
+    const frame = (ahoraMs: number) => {
+      const t = Math.min((ahoraMs - inicio) / ANIMACION_BUS_MS, 1);
+      const e = 1 - (1 - t) * (1 - t); // easeOutQuad: arranca rapido, frena suave
+      const lat = lerp(desde.lat, hacia.lat, e);
+      const lng = lerp(desde.lng, hacia.lng, e);
+      const angle = lerpAngle(desde.angle, anguloDestino, e);
+
+      marker.setLatLng([lat, lng]);
+
+      const cuerpo = marker
+        .getElement()
+        ?.querySelector<HTMLElement>(".rt-bus-marker__body");
+
+      if (cuerpo) cuerpo.style.transform = `rotate(${angle}deg)`;
+
+      estadoRef.current = { lat, lng, angle };
+
+      if (t < 1) rafRef.current = requestAnimationFrame(frame);
+    };
+
+    rafRef.current = requestAnimationFrame(frame);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [bus.lat, bus.lng, bus.heading]);
 
   return (
     <Marker
-      position={posicion}
-      icon={icono}
+      ref={markerRef}
+      position={[estadoRef.current.lat, estadoRef.current.lng]}
+      icon={icon}
       riseOnHover={true}
     >
       <Popup>
@@ -3241,6 +3326,9 @@ export default function Mapa({
         <TileLayer
           attribution={MAPA_PROFESIONAL.attribution}
           url={MAPA_PROFESIONAL.url}
+          subdomains="abcd"
+          detectRetina={true}
+          maxZoom={20}
         />
 
         {/* Solo se dibuja la ruta seleccionada para no saturar el mapa. */}
@@ -3331,8 +3419,10 @@ export default function Mapa({
             </Marker>
           ))}
 
+        {/* key estable (id del bus) + icono memoizado a nivel modulo para que
+            Leaflet no reemplace el DOM del marcador y la animacion no se corte. */}
         {busesFiltrados.map((bus) => (
-          <BusAnimado key={bus.id} bus={bus} />
+          <AnimatedBus key={bus.id} bus={bus} icon={busIcon} />
         ))}
 
         {gpsExternosFiltrados.map((gps) => (

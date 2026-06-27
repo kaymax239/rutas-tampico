@@ -40,6 +40,9 @@ type Bus = {
   // Rumbo opcional del autobus (0-360, 0 = norte). Solo se usa si el GPS del
   // chofer ya lo reporta; si no existe, queda en null y el icono no se rota.
   heading: number | null;
+  // Velocidad en m/s reportada por el GPS del chofer (si existe). Se convierte
+  // a km/h al mostrarla en la hoja del autobus.
+  speed: number | null;
   fecha?: Timestamp;
   // Ultima actualizacion normalizada a milisegundos (a partir de fecha,
   // timestamp, updatedAt, etc.). Se usa para la ventana de "en vivo".
@@ -1543,7 +1546,15 @@ function GpsExternoMarker({ gps }: { gps: GpsExterno }) {
 // requestAnimationFrame (60 fps) usando setLatLng directo sobre el marcador de
 // Leaflet (sin re-render de React). Ademas rota el cuerpo hacia donde avanza:
 // usa el rumbo del GPS del chofer si existe, o lo calcula del propio movimiento.
-function AnimatedBus({ bus, icon }: { bus: Bus; icon: L.DivIcon }) {
+function AnimatedBus({
+  bus,
+  icon,
+  onSelect,
+}: {
+  bus: Bus;
+  icon: L.DivIcon;
+  onSelect?: () => void;
+}) {
   const markerRef = useRef<L.Marker | null>(null);
   const rafRef = useRef<number | null>(null);
   // Momento de la ultima actualizacion de posicion, para medir el intervalo
@@ -1620,21 +1631,124 @@ function AnimatedBus({ bus, icon }: { bus: Bus; icon: L.DivIcon }) {
       position={[estadoRef.current.lat, estadoRef.current.lng]}
       icon={icon}
       riseOnHover={true}
-    >
-      <Popup>
-        <b>{bus.nombre}</b>
-        <br />
-        Ruta: {bus.ruta}
-        <br />
-        Ubicación reportada en vivo
-        {bus.heading !== null && (
-          <>
-            <br />
-            Rumbo: {Math.round(bus.heading)}°
-          </>
+      eventHandlers={{ click: onSelect }}
+    />
+  );
+}
+
+// Ventana (ms) dentro de la cual el camion se considera "En vivo".
+const VENTANA_EN_VIVO_MS = 30_000;
+
+// Texto del indicador cuando la señal ya no es reciente (> 30 s).
+function formatearUltimaSenal(actualizadoMs: number | null, ahoraMs: number) {
+  if (actualizadoMs === null) return "Sin señal reciente";
+
+  const segundos = Math.max(0, Math.round((ahoraMs - actualizadoMs) / 1000));
+
+  if (segundos < 60) return `Última señal hace ${segundos} seg`;
+
+  const minutos = Math.round(segundos / 60);
+
+  return `Última señal hace ${minutos} min`;
+}
+
+// Hoja deslizable (bottom-sheet) con los datos del camion seleccionado. Recibe
+// el bus ya derivado en vivo (puede ser null) y el reloj "ahora" para refrescar
+// el indicador cada segundo. La animacion entra/sale por CSS (translateY); el
+// wrapper se mantiene montado y solo cambia la clase --open.
+function BusBottomSheet({
+  bus,
+  routeColor,
+  ahora,
+  onClose,
+}: {
+  bus: Bus | null;
+  routeColor: string;
+  ahora: number;
+  onClose: () => void;
+}) {
+  const abierto = bus !== null;
+  // Conserva el ultimo bus visible para no vaciar el contenido durante la
+  // animacion de cierre (cuando bus ya volvio a null).
+  const ultimoBusRef = useRef<Bus | null>(bus);
+
+  if (bus) ultimoBusRef.current = bus;
+
+  const datos = bus ?? ultimoBusRef.current;
+  const enVivo =
+    datos?.actualizadoMs != null &&
+    ahora - datos.actualizadoMs < VENTANA_EN_VIVO_MS;
+  const velocidadKmh =
+    datos?.speed != null && datos.speed >= 0
+      ? Math.round(datos.speed * 3.6)
+      : null;
+
+  return (
+    <>
+      <div
+        className={
+          abierto
+            ? "rt-bus-sheet-backdrop rt-bus-sheet-backdrop--open"
+            : "rt-bus-sheet-backdrop"
+        }
+        onClick={onClose}
+        aria-hidden={!abierto}
+      />
+
+      <div
+        className={abierto ? "rt-bus-sheet rt-bus-sheet--open" : "rt-bus-sheet"}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!abierto}
+      >
+        <span className="rt-bus-sheet__grabber" aria-hidden="true" />
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rt-bus-sheet__close"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+
+        {datos && (
+          <div className="rt-bus-sheet__content">
+            <span
+              className="rt-bus-sheet__badge"
+              style={{ background: routeColor }}
+            >
+              {datos.nombre || datos.ruta || "Ruta"}
+            </span>
+
+            <div className="rt-bus-sheet__rows">
+              {velocidadKmh !== null && (
+                <div className="rt-bus-sheet__row">
+                  <small>Velocidad</small>
+                  <b>{velocidadKmh} km/h</b>
+                </div>
+              )}
+
+              {/* Proxima parada: pendiente de implementar */}
+              {/* ETA: pendiente de implementar */}
+            </div>
+
+            <div
+              className={
+                enVivo
+                  ? "rt-bus-sheet__live rt-bus-sheet__live--on"
+                  : "rt-bus-sheet__live rt-bus-sheet__live--off"
+              }
+            >
+              <span className="rt-bus-sheet__live-dot" aria-hidden="true" />
+              {enVivo
+                ? "En vivo"
+                : formatearUltimaSenal(datos.actualizadoMs, ahora)}
+            </div>
+          </div>
         )}
-      </Popup>
-    </Marker>
+      </div>
+    </>
   );
 }
 
@@ -1742,6 +1856,9 @@ export default function Mapa({
   >({});
   // Reloj que avanza cada segundo para refrescar "hace X segundos" del bus.
   const [ahora, setAhora] = useState(() => Date.now());
+  // Solo el ID; los datos se derivan en vivo de `buses` para que la hoja
+  // muestre posicion/velocidad/señal frescas mientras el camion se mueve.
+  const [selectedBusId, setSelectedBusId] = useState<string | null>(null);
   const [esperandoRuta, setEsperandoRuta] = useState(false);
   const [enviandoEspera, setEnviandoEspera] = useState(false);
   const [reportandoPaso, setReportandoPaso] = useState(false);
@@ -1812,6 +1929,7 @@ export default function Mapa({
     setEsperandoRuta(false);
     setEnviandoEspera(false);
     setMensajeAccionRuta("");
+    setSelectedBusId(null);
   }, [rutaSeleccionada]);
 
   useEffect(() => {
@@ -1847,6 +1965,10 @@ export default function Mapa({
             lat: Number(d.lat),
             lng: Number(d.lng),
             heading: leerHeading(d.heading ?? d.direction ?? d.rumbo),
+            speed:
+              typeof d.speed === "number" && Number.isFinite(d.speed)
+                ? d.speed
+                : null,
             fecha: d.fecha,
             actualizadoMs: obtenerMsActualizacion(
               d.fecha ??
@@ -2101,6 +2223,11 @@ export default function Mapa({
   const rutaMapaSeleccionada = rutasDeZona.find(
     (ruta) => ruta.nombre === rutaSeleccionada
   );
+  // Datos del camion seleccionado, derivados en vivo (no se guarda el objeto).
+  const busSeleccionado = selectedBusId
+    ? buses.find((b) => b.id === selectedBusId) ?? null
+    : null;
+  const colorRutaSeleccionada = rutaMapaSeleccionada?.color || "#38bdf8";
   const lugaresCercanosVisibles = useMemo(() => {
     if (!ubicacion) return [];
 
@@ -3438,13 +3565,26 @@ export default function Mapa({
         {/* key estable (id del bus) + icono memoizado a nivel modulo para que
             Leaflet no reemplace el DOM del marcador y la animacion no se corte. */}
         {busesFiltrados.map((bus) => (
-          <AnimatedBus key={bus.id} bus={bus} icon={busIcon} />
+          <AnimatedBus
+            key={bus.id}
+            bus={bus}
+            icon={busIcon}
+            onSelect={() => setSelectedBusId(bus.id)}
+          />
         ))}
 
         {gpsExternosFiltrados.map((gps) => (
           <GpsExternoMarker key={gps.id} gps={gps} />
         ))}
       </MapContainer>
+
+      {/* Overlay fijo (no es hijo del mapa): hoja con datos del camion tocado. */}
+      <BusBottomSheet
+        bus={busSeleccionado}
+        routeColor={colorRutaSeleccionada}
+        ahora={ahora}
+        onClose={() => setSelectedBusId(null)}
+      />
     </div>
   );
 }

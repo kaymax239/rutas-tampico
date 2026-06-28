@@ -25,6 +25,8 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { useImpresion } from "@/src/hooks/useImpresion";
+import { registrarImpresion } from "@/src/lib/registrarImpresion";
 
 // Un autobus en vivo se considera activo solo si su ultima actualizacion fue
 // hace 2 minutos o menos. Asi un chofer que cierra la app sin que se borre su
@@ -1770,6 +1772,53 @@ function BusBottomSheet({
   );
 }
 
+// Ítem de anunciante ("ventanita") que cuenta UNA impresión cuando se ve
+// (50% visible por 1s) y deduplica por día vía registrarImpresion. El clic se
+// delega al padre con onClick (que reusa registrarClickNegocio).
+function VentanitaAnunciante({
+  anunciante,
+  userId,
+  onClick,
+}: {
+  anunciante: LugarCercano;
+  userId: string | null;
+  onClick: (a: LugarCercano) => void;
+}) {
+  const refImpresion = useImpresion(
+    () => {
+      if (userId) void registrarImpresion(anunciante.id, userId);
+    },
+    { umbral: 0.5, tiempoMs: 1000, activo: !!userId }
+  );
+
+  return (
+    <div
+      ref={refImpresion}
+      className="rt-nearby-card__item"
+      role="button"
+      tabIndex={0}
+      onClick={() => onClick(anunciante)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick(anunciante);
+        }
+      }}
+    >
+      <strong>
+        {anunciante.nombre} – a {anunciante.distanciaMetros} m
+      </strong>
+      <small>
+        {ETIQUETAS_LUGARES[anunciante.categoria]}
+        {typeof anunciante.rating === "number"
+          ? ` · ⭐ ${anunciante.rating.toFixed(1)}`
+          : ""}
+        {" · Toca para ver detalles"}
+      </small>
+    </div>
+  );
+}
+
 function ControlarVistaMapa({
   ubicacion,
   ruta,
@@ -3368,32 +3417,12 @@ export default function Mapa({
               </span>
               <div className="rt-nearby-card__list">
                 {anunciantesVisibles.map((anunciante) => (
-                  <div
+                  <VentanitaAnunciante
                     key={anunciante.id}
-                    className="rt-nearby-card__item"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() =>
-                      void registrarClickNegocio(anunciante, "tarjeta")
-                    }
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        void registrarClickNegocio(anunciante, "tarjeta");
-                      }
-                    }}
-                  >
-                    <strong>
-                      {anunciante.nombre} – a {anunciante.distanciaMetros} m
-                    </strong>
-                    <small>
-                      {ETIQUETAS_LUGARES[anunciante.categoria]}
-                      {typeof anunciante.rating === "number"
-                        ? ` · ⭐ ${anunciante.rating.toFixed(1)}`
-                        : ""}
-                      {" · Toca para ver detalles"}
-                    </small>
-                  </div>
+                    anunciante={anunciante}
+                    userId={userId}
+                    onClick={(a) => void registrarClickNegocio(a, "tarjeta")}
+                  />
                 ))}
               </div>
             </>

@@ -2261,6 +2261,19 @@ export default function Mapa({
       .sort((a, b) => a.distanciaMetros - b.distanciaMetros)
       .slice(0, 3);
   }, [lugaresCercanos, ubicacion]);
+  // Anunciantes propios (de prueba) cercanos. Mismo patrón que
+  // lugaresCercanosVisibles, con la función local distanciaMetros. Resultado con
+  // forma LugarCercano para reusar registrarClickNegocio.
+  const anunciantesVisibles = useMemo<LugarCercano[]>(() => {
+    if (!ubicacion) return [];
+
+    return ANUNCIANTES_PRUEBA.map((a) => ({
+      ...a,
+      distanciaMetros: Math.round(distanciaMetros(ubicacion, [a.lat, a.lng])),
+    }))
+      .filter((a) => a.distanciaMetros <= LUGARES_RADIO_M)
+      .sort((a, b) => a.distanciaMetros - b.distanciaMetros);
+  }, [ubicacion]);
   const lugaresMarcadoresVisibles = gpsBus01Seleccionado
     ? []
     : lugaresCercanosVisibles;
@@ -3344,8 +3357,47 @@ export default function Mapa({
         )}
 
       {lugaresActivos &&
-        (lugaresCercanosVisibles.length > 0 || mensajeLugares) && (
+        (anunciantesVisibles.length > 0 ||
+          lugaresCercanosVisibles.length > 0 ||
+          mensajeLugares) && (
         <div className="rt-nearby-card">
+          {anunciantesVisibles.length > 0 && (
+            <>
+              <span className="rt-nearby-card__eyebrow rt-nearby-card__eyebrow--ad">
+                Patrocinado
+              </span>
+              <div className="rt-nearby-card__list">
+                {anunciantesVisibles.map((anunciante) => (
+                  <div
+                    key={anunciante.id}
+                    className="rt-nearby-card__item"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      void registrarClickNegocio(anunciante, "tarjeta")
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        void registrarClickNegocio(anunciante, "tarjeta");
+                      }
+                    }}
+                  >
+                    <strong>
+                      {anunciante.nombre} – a {anunciante.distanciaMetros} m
+                    </strong>
+                    <small>
+                      {ETIQUETAS_LUGARES[anunciante.categoria]}
+                      {typeof anunciante.rating === "number"
+                        ? ` · ⭐ ${anunciante.rating.toFixed(1)}`
+                        : ""}
+                      {" · Toca para ver detalles"}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           {lugaresCercanosVisibles.length > 0 ? (
             <>
               <span className="rt-nearby-card__eyebrow">Cerca de ti</span>

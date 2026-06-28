@@ -144,6 +144,24 @@ const MAPA_PROFESIONAL = {
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const LUGARES_RADIO_M = 300;
 const LUGARES_MAXIMOS = 10;
+// TEMPORAL: anunciantes propios de prueba (negocios destacados), independientes
+// de Google Places. Tipo mínimo COMPATIBLE con LugarCercano: comparte
+// id/nombre/categoria/lat/lng/rating (categoria usa CategoriaLugar válida).
+// Solo datos; sin UI ni lógica todavía (la UI llega en el sub-paso 2).
+type Anunciante = {
+  id: string;
+  nombre: string;
+  categoria: CategoriaLugar;
+  lat: number;
+  lng: number;
+  rating?: number;
+};
+
+const ANUNCIANTES_PRUEBA: Anunciante[] = [
+  { id: "anuncio-1", nombre: "Mariscos El Capitán", categoria: "restaurant", lat: 22.2557, lng: -97.8681, rating: 4.7 },
+  { id: "anuncio-2", nombre: "Farmacia Marina", categoria: "pharmacy", lat: 22.2549, lng: -97.8694, rating: 4.5 },
+  { id: "anuncio-3", nombre: "Café del Puerto", categoria: "cafe", lat: 22.2561, lng: -97.8699, rating: 4.8 },
+];
 const LUGARES_INTERVALO_MS = 30_000;
 const LUGARES_MOVIMIENTO_MINIMO_M = 80;
 const CLICK_NEGOCIO_COOLDOWN_MS = 5_000;

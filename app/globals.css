@@ -1703,4 +1703,83 @@ button {
   .fab-cerca__icon--spin {
     animation: none;
   }
+
+  .rt-empty-map {
+    animation: none;
+  }
+}
+
+/* Aviso "mapa vacío": no hay ninguna unidad transmitiendo. Mismo lenguaje
+   visual que el bottom-sheet (vidrio oscuro + blur), con acento ámbar suave.
+   Centrado bajo el header, sin tapar los FAB ni los controles. */
+.rt-empty-map {
+  position: absolute;
+  top: max(124px, calc(env(safe-area-inset-top) + 116px));
+  left: 12px;
+  right: 12px;
+  z-index: 99998;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 360px;
+  margin: 0 auto;
+  border: 1px solid rgba(245, 158, 11, 0.42);
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(69, 39, 6, 0.62),
+    rgba(15, 23, 42, 0.82)
+  );
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #fde9c8;
+  padding: 12px 14px;
+  backdrop-filter: blur(20px);
+  animation: rt-empty-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rt-empty-map__icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+}
+
+.rt-empty-map__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.rt-empty-map__title {
+  color: #fde68a;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.rt-empty-map__text {
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  opacity: 0.92;
+}
+
+@keyframes rt-empty-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

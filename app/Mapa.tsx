@@ -3005,6 +3005,36 @@ export default function Mapa({
         )}
       </div>
 
+      {!hayBusActivo && (
+        <div className="rt-empty-map" role="status" aria-live="polite">
+          <span className="rt-empty-map__icon" aria-hidden="true">
+            <svg
+              width={20}
+              height={20}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+          </span>
+          <div className="rt-empty-map__body">
+            <strong className="rt-empty-map__title">
+              No hay unidades en ruta ahora mismo
+            </strong>
+            <span className="rt-empty-map__text">
+              Los autobuses aparecen en el mapa solo cuando un chofer inicia su
+              recorrido.
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="rt-bottom-sheet">
         <div className="rt-bottom-sheet__header">
           <div>

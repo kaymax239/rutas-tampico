@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esTextoLleno(valor) {
+      return valor is string && valor.size() > 0 && valor.size() < 500;
+    }
+    function esTexto(valor) {
+      return valor is string && valor.size() < 500;
+    }
+    function esNumero(valor) {
+      return valor is number;
+    }
+
+    match /autobuses/{busId} {
+      allow read: if true;
+      allow create, update: if esNumero(request.resource.data.lat)
+                            && esNumero(request.resource.data.lng);
+      allow delete: if true;
+    }
+
+    match /usuariosEnLinea/{docId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if true;
+    }
+
+    match /usuariosKm/{docId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
+    match /viajesUsuarios/{docId} {
+      allow read: if false;
+      allow create: if esTextoLleno(request.resource.data.userId);
+      allow update, delete: if false;
+    }
+
+    match /clicksNegocios/{docId} {
+      allow read: if false;
+      allow create: if esTexto(request.resource.data.nombre);
+      allow update, delete: if false;
+    }
+
+    match /sugerencias/{docId} {
+      allow read: if false;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    match /clicksAnuncios/{docId} {
+      allow read: if false;
+      allow create: if esTextoLleno(request.resource.data.anuncio);
+      allow update, delete: if false;
+    }
+
+    match /impresiones/{docId} {
+      allow read: if false;
+      allow create, update: if esTexto(request.resource.data.anuncioId)
+                            && esTextoLleno(request.resource.data.userId);
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

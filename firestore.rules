@@ -1,67 +1,180 @@
 rules_version = '2';
+
+// ============================================================================
+// Reglas de Firestore — proyecto rutas-de-autobuses (Rutas Tampico MAFA)
+// ============================================================================
+// IMPORTANTE: la app NO usa Firebase Auth (todo es anónimo con ids generados en
+// el cliente / localStorage). Por lo tanto estas reglas SOLO pueden:
+//   - validar la FORMA de los documentos (tipos de campo) y RANGOS de valores,
+//   - restringir qué operaciones se permiten (create / update / read / delete).
+// NO pueden verificar identidad ni propiedad del documento: cualquier cliente
+// puede escribir en el doc {userId} de otro porque no hay request.auth. Si en el
+// futuro se agrega Firebase Auth (aunque sea anónimo), habría que reforzar los
+// bloques con `request.auth.uid == userId`.
+//
+// "read público solo con filtros" (colección abordo): Firestore NO permite
+// exigir por reglas que una consulta incluya un `where` concreto. Lo más cercano
+// es acotar el tamaño de la lista (request.query.limit). El filtrado por ruta
+// debe hacerlo el cliente en su query; las reglas solo limitan la página.
+//
+// Rango geográfico aprox. de la zona (Tampico / Madero / Altamira), con colchón
+// para brincos de GPS:
+//   lat: 22.0 .. 22.6   |   lng: -98.2 .. -97.6
+//
+// TODO (post-lanzamiento): migrar a Firebase Auth anónimo y reforzar propiedad
+// con request.auth.uid (escrituras solo del dueño del doc); cerrar los deletes
+// abiertos de autobuses y abordo.
+// ============================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function esTextoLleno(valor) {
-      return valor is string && valor.size() > 0 && valor.size() < 500;
+    // ---- Helpers ---------------------------------------------------------
+    function latOk(v) {
+      return v is number && v >= 22.0 && v <= 22.6;
     }
-    function esTexto(valor) {
-      return valor is string && valor.size() < 500;
+    function lngOk(v) {
+      return v is number && v >= -98.2 && v <= -97.6;
     }
-    function esNumero(valor) {
-      return valor is number;
+    function numOrNull(v) {
+      return v == null || v is number;
+    }
+    function strOrNull(v) {
+      return v == null || v is string;
+    }
+    function strNoVacio(v) {
+      return v is string && v.size() > 0;
     }
 
+    // ---- autobuses -------------------------------------------------------
+    // GPS en vivo del chofer. Read público (los pasajeros ven el mapa).
+    // Write validado: lat/lng en rango, routeId string, status "active".
+    // Delete abierto: el chofer borra su doc al dejar de transmitir (sin Auth
+    // no se puede restringir al dueño; la ventana de 2 min lo respalda).
+    function validBus(d) {
+      return latOk(d.lat)
+        && lngOk(d.lng)
+        && d.routeId is string
+        && d.status == 'active'
+        && numOrNull(d.get('heading', null))
+        && numOrNull(d.get('speed', null));
+    }
     match /autobuses/{busId} {
       allow read: if true;
-      allow create, update: if esNumero(request.resource.data.lat)
-                            && esNumero(request.resource.data.lng);
+      allow create, update: if validBus(request.resource.data);
       allow delete: if true;
     }
 
-    match /usuariosEnLinea/{docId} {
+    // ---- usuariosEnLinea -------------------------------------------------
+    // Presencia (heartbeat). Read público (contador de usuarios en línea).
+    // Write validado. Delete abierto (el hook borra su doc al salir).
+    function validPresence(d) {
+      return d.online is bool
+        && strOrNull(d.get('route', null))
+        && d.lastSeen is timestamp;
+    }
+    match /usuariosEnLinea/{sessionId} {
       allow read: if true;
-      allow create, update: if true;
+      allow create, update: if validPresence(request.resource.data);
       allow delete: if true;
     }
 
-    match /usuariosKm/{docId} {
-      allow read: if true;
-      allow create, update: if true;
+    // ---- usuariosKm ------------------------------------------------------
+    // Kilometraje / nivel por usuario. El código solo lee el doc propio por ID:
+    // se permite `get` pero NO `list` (evita enumerar todos los usuarios).
+    function validUsuarioKm(d) {
+      return d.kmTotales is number && d.kmTotales >= 0
+        && d.viajesTotales is number && d.viajesTotales >= 0
+        && d.nivel is string;
+    }
+    match /usuariosKm/{userId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if validUsuarioKm(request.resource.data);
       allow delete: if false;
     }
 
-    match /viajesUsuarios/{docId} {
+    // ---- viajesUsuarios --------------------------------------------------
+    // Historial de viajes (solo se crean, nunca se editan). Sin read público:
+    // contiene lat/lng de usuarios y ningún flujo del código la lee (mismo
+    // criterio que sugerencias).
+    function validViaje(d) {
+      return d.userId is string
+        && d.kmCalculados is number && d.kmCalculados >= 0
+        && d.latInicio is number && d.lngInicio is number
+        && d.latFin is number && d.lngFin is number;
+    }
+    match /viajesUsuarios/{viajeId} {
       allow read: if false;
-      allow create: if esTextoLleno(request.resource.data.userId);
+      allow create: if validViaje(request.resource.data);
       allow update, delete: if false;
     }
 
-    match /clicksNegocios/{docId} {
+    // ---- sugerencias -----------------------------------------------------
+    // Sugerencias de ruta + reporte_paso + esperando_ruta. Solo create.
+    // Sin read público (contienen lat/lng del usuario).
+    match /sugerencias/{id} {
       allow read: if false;
-      allow create: if esTexto(request.resource.data.nombre);
+      allow create: if request.resource.data.fecha is timestamp
+        && numOrNull(request.resource.data.get('latUsuario', null))
+        && numOrNull(request.resource.data.get('lngUsuario', null));
       allow update, delete: if false;
     }
 
-    match /sugerencias/{docId} {
+    // ---- clicksNegocios --------------------------------------------------
+    // Métricas de "Cerca de ti". Solo create, sin read público. Acepta el doc
+    // si trae placeId string O nombre string (el código escribe ambos).
+    match /clicksNegocios/{id} {
       allow read: if false;
-      allow create: if true;
+      allow create: if request.resource.data.get('placeId', null) is string
+        || request.resource.data.get('nombre', null) is string;
       allow update, delete: if false;
     }
 
-    match /clicksAnuncios/{docId} {
+    // ---- clicksAnuncios --------------------------------------------------
+    // Métricas de patrocinados. Solo create, sin read público.
+    match /clicksAnuncios/{id} {
       allow read: if false;
-      allow create: if esTextoLleno(request.resource.data.anuncio);
+      allow create: if request.resource.data.anuncio is string;
       allow update, delete: if false;
     }
 
-    match /impresiones/{docId} {
+    // ---- impresiones -----------------------------------------------------
+    // Impresiones de ventanitas de anunciantes (dedup por día, feature de la
+    // otra rama). Solo create/update, sin read público. Validado: anuncioId
+    // string y userId no vacío.
+    match /impresiones/{id} {
       allow read: if false;
-      allow create, update: if esTexto(request.resource.data.anuncioId)
-                            && esTextoLleno(request.resource.data.userId);
+      allow create, update: if request.resource.data.anuncioId is string
+        && strNoVacio(request.resource.data.userId);
       allow delete: if false;
     }
 
+    // ---- abordo (NUEVA) --------------------------------------------------
+    // Pasajero compartiendo posición mientras va a bordo. Doc por {userId}.
+    // create/update validados (rutaId, lat/lng en rango, velocidad, timestamp,
+    // activo). Read público acotado: get libre; list limitado en tamaño para
+    // evitar barridos completos (el filtro por ruta lo aplica el cliente en su
+    // query). Sin Auth no se puede restringir la escritura al dueño del {userId}.
+    function validAbordo(d) {
+      return d.rutaId is string
+        && latOk(d.lat)
+        && lngOk(d.lng)
+        && d.velocidad is number
+        && d.timestamp is timestamp
+        && d.activo is bool;
+    }
+    match /abordo/{userId} {
+      allow get: if true;
+      allow list: if request.query.limit <= 200;
+      allow create, update: if validAbordo(request.resource.data);
+      allow delete: if true;
+    }
+
+    // ---- catch-all deny --------------------------------------------------
+    // Cualquier ruta/colección no listada arriba queda denegada explícitamente.
+    // (El default de Firestore ya es denegar; esto lo hace explícito. No anula
+    // los `allow` de arriba: el acceso se concede si ALGUNA regla lo permite.)
     match /{document=**} {
       allow read, write: if false;
     }

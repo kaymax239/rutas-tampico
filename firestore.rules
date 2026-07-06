@@ -175,6 +175,9 @@ service cloud.firestore {
     // Cualquier ruta/colección no listada arriba queda denegada explícitamente.
     // (El default de Firestore ya es denegar; esto lo hace explícito. No anula
     // los `allow` de arriba: el acceso se concede si ALGUNA regla lo permite.)
+    // Nota: usuarios_activos y viajesSeguros existen en la BD pero son huérfanas
+    // de versiones viejas (0 referencias en código, verificado 06/07/2026).
+    // Bloqueadas a propósito por el catch-all. No agregar reglas para ellas.
     match /{document=**} {
       allow read, write: if false;
     }

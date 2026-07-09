@@ -1444,6 +1444,7 @@ export default function Mapa({
 
         <button
           onClick={() => cambiarZona("Tampico / Madero")}
+          className="rt-zone-tampico-cartoon"
           style={{
             padding: 22,
             borderRadius: 20,

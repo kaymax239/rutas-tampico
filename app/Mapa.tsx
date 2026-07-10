@@ -291,7 +291,7 @@ function obtenerEtiquetaZona(zona: Zona) {
 }
 
 function obtenerEtiquetaTipoRuta(tipo: TipoRuta | null) {
-  if (tipo === "urbano") return "Rutas urbano";
+  if (tipo === "urbano") return "Rutas urban";
   if (tipo === "micro-local") return "Rutas micro/local";
 
   return "Todas las rutas";
@@ -1369,14 +1369,14 @@ export default function Mapa({
             padding: 22,
             borderRadius: 20,
             border: "none",
-            background: "#22c55e",
+            background: "#f97316",
             color: "white",
             fontSize: 22,
             fontWeight: 800,
             cursor: "pointer",
           }}
         >
-          Rutas urbano
+          Rutas urban
         </button>
 
         <button
@@ -1441,6 +1441,24 @@ export default function Mapa({
         <p style={{ color: "#cbd5e1", textAlign: "center", margin: 0 }}>
           {obtenerEtiquetaTipoRuta(tipoRutaSeleccionado)}
         </p>
+
+        {modoUsuario === "pasajero" && (
+          <button
+            onClick={() => seleccionarTipoRuta("urbano")}
+            style={{
+              padding: 18,
+              borderRadius: 20,
+              border: "none",
+              background: "#f97316",
+              color: "white",
+              fontSize: 20,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            Rutas urban
+          </button>
+        )}
 
         <button
           onClick={() => cambiarZona("Tampico / Madero")}

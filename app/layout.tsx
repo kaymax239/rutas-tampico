@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/react";
+import PWARegister from "./PWARegister";
 import "./globals.css";
 
 export const metadata = {
@@ -18,6 +19,7 @@ export default function RootLayout({
     <html lang="es">
       <body>
         {children}
+        <PWARegister />
         <Analytics />
       </body>
     </html>

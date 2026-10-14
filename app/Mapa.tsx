@@ -33,9 +33,9 @@ const GPS_WRITE_METROS = 35;
 const BUS_STALE_MS = 45000;
 const USUARIO_KM_INICIAL: UsuarioKm = { kmTotales: 0, viajesTotales: 0, nivel: "Nuevo pasajero", ultimoViaje: null };
 const MAPAS_DISPONIBLES: Record<EstiloMapa, { label: string; url: string; attribution: string; premium?: boolean }> = {
-  navegacion: { label: "Navegación", url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap &copy; CARTO" },
-  normal: { label: "Mapa normal", url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap &copy; CARTO" },
-  nocturno: { label: "Mapa nocturno", url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", attribution: "&copy; OpenStreetMap &copy; CARTO", premium: true },
+  navegacion: { label: "Navegación", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors" },
+  normal: { label: "Mapa normal", url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors" },
+  nocturno: { label: "Mapa nocturno", url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors", premium: true },
   barrio: { label: "Mapa barrio", url: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", attribution: "&copy; OpenStreetMap contributors, Tiles style by HOT" },
 };
 

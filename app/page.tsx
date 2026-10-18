@@ -89,7 +89,7 @@ export default function Home() {
     return (
       <main style={{ minHeight: "100vh", background: "#0f172a", display: "flex", justifyContent: "center", alignItems: "center", padding: 20 }}>
         <div style={{ background: "#111827", padding: 30, borderRadius: 24, width: "100%", maxWidth: 420, textAlign: "center", boxShadow: "0 10px 30px rgba(0,0,0,.45)", display: "flex", flexDirection: "column", gap: 12 }}>
-          <h1 style={{ color: "white", fontSize: 30, fontWeight: 800 }}>🚍 Rutas Kaymax</h1>
+          <h1 style={{ color: "white", fontSize: 30, fontWeight: 800 }}>🚍 Rutas Tampico</h1>
           <p style={{ color: "#cbd5e1", marginBottom: 16 }}>Transporte en vivo para Tampico, Madero y Altamira</p>
           <div style={{ background: "rgba(34,197,94,.14)", border: "1px solid rgba(34,197,94,.45)", color: "#bbf7d0", borderRadius: 16, padding: "12px 14px", fontWeight: 800, marginBottom: 4 }}>👥 Usuarios en línea: {usuariosEnLinea.loading ? "..." : usuariosEnLinea.total}</div>
           <button onClick={() => setModo("chofer")} style={{ ...boton, background: "#22c55e", color: "white", padding: 18, fontSize: 18 }}>🚌 Soy Chofer</button>

@@ -9,6 +9,7 @@ import {
   serverTimestamp, setDoc, type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { gpsDisponible, obtenerPosicion, seguirPosicion } from "./geo";
 import { GPS_EXTERNOS, rutas, type GpsExterno, type Ruta, type Zona } from "./mapRutas";
 
 type Bus = { id: string; nombre?: string; ruta?: string; lat: number; lng: number; fecha?: Timestamp };
@@ -88,10 +89,7 @@ function calcularKilometrajeViaje(ruta: string, inicio: [number, number], fin: [
   return { kmCalculados: redondearKm(distanciaHaversineKm(inicio, fin)), metodoCalculo: "haversine" as const };
 }
 function obtenerPosicionActual() {
-  return new Promise<GeolocationPosition>((resolve, reject) => {
-    if (!navigator.geolocation) { reject(new Error("Geolocalizacion no disponible")); return; }
-    navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-  });
+  return obtenerPosicion(10000);
 }
 function obtenerNumero(value: unknown) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
 function normalizarUltimoViaje(value: unknown) {
@@ -171,11 +169,11 @@ export default function Mapa({ modoUsuario = "pasajero", conteoUsuariosPorRuta =
   const [mostrarOpcionesMapa, setMostrarOpcionesMapa] = useState(false);
   const [estiloMapa, setEstiloMapa] = useState<EstiloMapa>("navegacion");
   const [rastreandoGPS, setRastreandoGPS] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
+  const watchIdRef = useRef<(() => void) | null>(null);
   const lastWriteRef = useRef({ t: 0, lat: 0, lng: 0 });
   const [recargarCentro, setRecargarCentro] = useState(0);
 
-  useEffect(() => () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); }, []);
+  useEffect(() => () => { if (watchIdRef.current !== null) watchIdRef.current(); }, []);
 
   useEffect(() => {
     if (!rutaSeleccionada) { setBuses([]); return; }
@@ -222,10 +220,10 @@ export default function Mapa({ modoUsuario = "pasajero", conteoUsuariosPorRuta =
   const seleccionarRuta = (ruta: string) => { setRutaSeleccionada(ruta); onRutaSeleccionada?.(ruta); setPantallaFlujo("mapa"); };
 
   const obtenerMiUbicacion = () => {
-    if (!navigator.geolocation) { alert("Tu navegador no soporta GPS. Usa Chrome o Safari actualizado."); return; }
-    if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; setRastreandoGPS(false); return; }
+    if (!gpsDisponible()) { alert("Tu navegador no soporta GPS. Usa Chrome o Safari actualizado."); return; }
+    if (watchIdRef.current !== null) { watchIdRef.current(); watchIdRef.current = null; setRastreandoGPS(false); return; }
     const choferIdActual = modoUsuario === "chofer" ? (userId || obtenerOCrearUserId()) : null;
-    watchIdRef.current = navigator.geolocation.watchPosition((pos) => {
+    watchIdRef.current = seguirPosicion((pos) => {
       const lat = pos.coords.latitude; const lng = pos.coords.longitude;
       setUbicacion([lat, lng]);
       if (modoUsuario === "chofer" && choferIdActual) {
@@ -238,10 +236,10 @@ export default function Mapa({ modoUsuario = "pasajero", conteoUsuariosPorRuta =
       }
     }, (error) => {
       alert(error.code === 1
-        ? "No se pudo activar la ubicación. Revisa permisos de GPS.\n\nEn tu celular: Configuración → Apps → Navegador → Permisos → Ubicación → Permitir."
+        ? "No se pudo activar la ubicación. Revisa permisos de GPS.\n\nEn tu celular: Android: Configuración → Apps → Rutas Tampico → Permisos → Ubicación.\niPhone: Ajustes → Rutas Tampico → Ubicación."
         : "No se pudo activar la ubicación. Revisa permisos de GPS.");
       watchIdRef.current = null; setRastreandoGPS(false);
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    }, 15000);
     setRastreandoGPS(true);
     setRecargarCentro((n) => n + 1);
   };

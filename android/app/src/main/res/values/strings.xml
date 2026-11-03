@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Rutas Tampico MAFA</string>
-    <string name="title_activity_main">Rutas Tampico MAFA</string>
+    <string name="app_name">Rutas Tampico</string>
+    <string name="title_activity_main">Rutas Tampico</string>
     <string name="package_name">com.rutastampico.mafa</string>
     <string name="custom_url_scheme">com.rutastampico.mafa</string>
 </resources>
